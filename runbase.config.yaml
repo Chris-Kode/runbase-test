@@ -6,7 +6,7 @@
            labels:
              - bug
        run:
-         provider: openai-codex
+         provider: my-provider
          model: gpt-5.3-codex-sol
          thinking: medium
          prompt: |
@@ -20,7 +20,7 @@
          pull_request:
            action: opened
        run:
-         provider: openai-codex
+         provider: my-provider
          model: gpt-5.3-codex-sol
          thinking: high
          prompt: |
