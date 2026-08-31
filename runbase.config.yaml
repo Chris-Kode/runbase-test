@@ -4,7 +4,7 @@
          issue:
            action: labeled
            labels:
-             - triage
+             - bug
        run:
          provider: openai-codex
          model: gpt-5.3-codex-sol
