@@ -1,0 +1,39 @@
+   automations:
+     - name: triage-issues
+       on:
+         issue:
+           action: labeled
+           labels:
+             - triage
+       run:
+         provider: openai-codex
+         model: gpt-5.3-codex-sol
+         thinking: medium
+         prompt: |
+           Review issue #{{ issue.number }}: {{ issue.title }}.
+           Body: {{ issue.body }}
+           Filed by {{ issue.author }}.
+           Classify the bug severity and suggest next steps.
+
+     - name: review-pr
+       on:
+         pull_request:
+           action: opened
+       run:
+         provider: openai-codex
+         model: gpt-5.3-codex-sol
+         thinking: high
+         prompt: |
+           Review PR #{{ pull_request.number }}: {{ pull_request.title }}.
+           Check correctness, tests, and style. List findings by priority.
+
+     - name: final-check
+       on:
+         pull_request:
+           action: ready_for_review
+       run:
+         provider: openai-codex
+         model: gpt-5.3-codex-sol
+         thinking: off
+         prompt: |
+             Summarize changes in PR #{{ pull_request.number }} in one paragraph.
