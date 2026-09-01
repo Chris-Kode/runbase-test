@@ -7,8 +7,8 @@
              - bug
        run:
          provider: my-provider
-         model: gpt-5.3-codex-sol
-         thinking: medium
+         model: meta/muse-spark-1.2-contributor
+         thinking: high
          prompt: |
            Review issue #{{ issue.number }}: {{ issue.title }}.
            Body: {{ issue.body }}
@@ -21,7 +21,7 @@
            action: opened
        run:
          provider: my-provider
-         model: gpt-5.3-codex-sol
+         model: meta/muse-spark-1.2-contributor
          thinking: high
          prompt: |
            Review PR #{{ pull_request.number }}: {{ pull_request.title }}.
@@ -33,7 +33,7 @@
            action: ready_for_review
        run:
          provider: openai-codex
-         model: gpt-5.3-codex-sol
-         thinking: off
+         model: meta/muse-spark-1.2-contributor
+         thinking: high
          prompt: |
              Summarize changes in PR #{{ pull_request.number }} in one paragraph.
