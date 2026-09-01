@@ -8,7 +8,7 @@
    # with its own commands after boot, so this image needs no start step.
 
    # System packages the agent's code needs. git already ships with the
-   # base image, so the clone step works without changes here.
+   # base image, so the clone step works without changes here. ok
    RUN apt-get update \
        && apt-get install -y --no-install-recommends \
          curl \
