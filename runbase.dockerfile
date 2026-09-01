@@ -2,7 +2,7 @@
    # The Sandbox image for this Repository. Runbase builds and pushes it to
    # the Vercel Container Registry on every push that touches this file.
 
-   FROM vercel/sandbox/universal:latest
+FROM node:24-bookworm
 
    # Vercel Sandbox ignores ENTRYPOINT and CMD. The worker starts the agent
    # with its own commands after boot, so this image needs no start step.
