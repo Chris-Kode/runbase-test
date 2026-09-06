@@ -1,22 +1,4 @@
 automations:
-  - name: triage-issues
-    on:
-      issue:
-        action: labeled
-        labels:
-          - bug
-    run:
-      provider: my-provider
-      model: meta/muse-spark-1.3-contributor
-      thinking: high
-      prompt: |
-        Review issue #{{ issue.number }}: {{ issue.title }}.
-        Body: {{ issue.body }}
-        Filed by {{ issue.author }}.
-        Classify the bug severity and suggest next steps.
-    delivery:
-      type: comment
-
   - name: implement-issue
     on:
       issue:
@@ -35,21 +17,8 @@ automations:
     delivery:
       type: pull_request
       merge:
-        mode: manual
-
-  - name: review-pr
-    on:
-      pull_request:
-        action: opened
-    run:
-      provider: my-provider
-      model: meta/muse-spark-1.3-contributor
-      thinking: high
-      prompt: |
-        Review PR #{{ pull_request.number }}: {{ pull_request.title }}.
-        Check correctness, tests, and style. List findings by priority.
-    delivery:
-      type: comment
+        mode: automatic
+        method: squash
 
   - name: final-check
     on:
