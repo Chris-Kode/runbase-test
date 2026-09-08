@@ -20,7 +20,7 @@ automations:
         blocked: false
     run:
       provider: my-provider
-      model: zai/glm-5.3-flash
+      model: openai/gpt-5.6-luna
       thinking: high
       prompt: >-
         Write the technical plan for issue {{ issue.number }}: {{ issue.title }}.
@@ -45,7 +45,7 @@ automations:
         blocked: false
     run:
       provider: my-provider
-      model: zai/glm-5.3-flash
+      model: openai/gpt-5.6-luna
       thinking: high
       prompt: >-
         Implement issue {{ issue.number }}: {{ issue.title }}.
@@ -71,7 +71,7 @@ automations:
         labels: [ready-to-review]
     run:
       provider: my-provider
-      model: zai/glm-5.3-flash
+      model: openai/gpt-5.6-luna
       thinking: high
       prompt: >-
         Review pull request {{ pull_request.number }}: {{ pull_request.title }}.
@@ -96,7 +96,7 @@ automations:
         labels: [ready-to-review, ready-to-fix]
     run:
       provider: my-provider
-      model: zai/glm-5.3-flash
+      model: openai/gpt-5.6-luna
       thinking: high
       prompt: >-
         Fix pull request {{ pull_request.number }}: {{ pull_request.title }}.
