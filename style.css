@@ -12,6 +12,12 @@ body {
 
 main {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#todo-form {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
@@ -30,7 +36,6 @@ main {
 }
 
 #todo-list {
-  flex-basis: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
