@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { addTodo, todos } from './addTodo.js';
+import { addTodo, todos, clearTodos } from './addTodo.js';
 
 describe('addTodo', () => {
   beforeEach(() => {
-    // Clear the todos array before each test
-    todos.length = 0;
+    clearTodos();
   });
 
   it('should create a todo with the correct structure', () => {

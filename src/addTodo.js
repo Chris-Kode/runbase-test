@@ -7,3 +7,7 @@ export function addTodo(text) {
   todos.push(todo);
   return todo;
 }
+
+export function clearTodos() {
+  todos.length = 0;
+}
