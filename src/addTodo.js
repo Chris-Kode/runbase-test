@@ -15,6 +15,12 @@ export function toggleTodo(id) {
   return todo;
 }
 
+export function deleteTodo(id) {
+  const index = todos.findIndex((t) => t.id === id);
+  if (index === -1) return;
+  return todos.splice(index, 1)[0];
+}
+
 export function clearTodos() {
   todos.length = 0;
 }
