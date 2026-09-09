@@ -8,6 +8,13 @@ export function addTodo(text) {
   return todo;
 }
 
+export function toggleTodo(id) {
+  const todo = todos.find((t) => t.id === id);
+  if (!todo) return;
+  todo.completed = !todo.completed;
+  return todo;
+}
+
 export function clearTodos() {
   todos.length = 0;
 }
