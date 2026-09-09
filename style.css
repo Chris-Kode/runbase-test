@@ -40,3 +40,43 @@ main {
   padding: 0;
   list-style: none;
 }
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.todo-checkbox {
+  flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+}
+
+.todo-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: #999;
+  font: inherit;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  color: #e33;
+}
