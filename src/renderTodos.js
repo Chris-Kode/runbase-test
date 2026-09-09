@@ -6,6 +6,7 @@ import { todos } from './addTodo.js';
  */
 export function renderTodos() {
   const list = document.getElementById('todo-list');
+  if (!list) return;
   list.innerHTML = '';
   todos.forEach((todo) => {
     const li = createTodoElement(todo);

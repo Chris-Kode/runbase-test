@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderTodos, createTodoElement } from './renderTodos.js';
-import { addTodo, clearTodos, todos } from './addTodo.js';
+import { addTodo, clearTodos } from './addTodo.js';
 
 describe('createTodoElement', () => {
   it('should create an li with data-id matching the todo id', () => {
@@ -100,5 +100,11 @@ describe('renderTodos', () => {
       (el) => el.textContent
     );
     expect(texts).toEqual(['Todo A', 'Todo B', 'Todo C']);
+  });
+
+  it('should not throw when #todo-list is missing from the DOM', () => {
+    document.body.innerHTML = '';
+    addTodo('Should not throw');
+    expect(() => renderTodos()).not.toThrow();
   });
 });
