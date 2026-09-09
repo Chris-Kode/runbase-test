@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { addTodo, todos, clearTodos } from './addTodo.js';
+import { addTodo, toggleTodo, todos, clearTodos } from './addTodo.js';
 
 describe('addTodo', () => {
   beforeEach(() => {
@@ -55,5 +55,45 @@ describe('addTodo', () => {
     const todo1 = addTodo('First');
     const todo2 = addTodo('Second');
     expect(todo1).not.toBe(todo2);
+  });
+});
+
+describe('toggleTodo', () => {
+  beforeEach(() => {
+    clearTodos();
+  });
+
+  it('should toggle a todo from incomplete to completed', () => {
+    const todo = addTodo('Buy milk');
+    const updated = toggleTodo(todo.id);
+    expect(updated.completed).toBe(true);
+  });
+
+  it('should toggle a todo from completed back to incomplete', () => {
+    const todo = addTodo('Buy milk');
+    toggleTodo(todo.id);
+    const updated = toggleTodo(todo.id);
+    expect(updated.completed).toBe(false);
+  });
+
+  it('should return the updated todo', () => {
+    const todo = addTodo('Buy milk');
+    const updated = toggleTodo(todo.id);
+    expect(updated).toBeDefined();
+    expect(updated.id).toBe(todo.id);
+    expect(updated.text).toBe(todo.text);
+    expect(updated.completed).toBe(true);
+  });
+
+  it('should return undefined for a non-existent id', () => {
+    const result = toggleTodo(999999);
+    expect(result).toBeUndefined();
+  });
+
+  it('should not affect other todos when toggling one', () => {
+    const todo1 = addTodo('First');
+    const todo2 = addTodo('Second');
+    toggleTodo(todo1.id);
+    expect(todo2.completed).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderTodos, createTodoElement } from './renderTodos.js';
 import { addTodo, clearTodos } from './addTodo.js';
 
@@ -48,6 +48,38 @@ describe('createTodoElement', () => {
     const todo = { id: 1, text: 'Test', completed: false };
     const li = createTodoElement(todo);
     expect(li.classList.contains('todo-item')).toBe(true);
+  });
+
+  it('should not add completed class when todo is incomplete', () => {
+    const todo = { id: 1, text: 'Buy milk', completed: false };
+    const li = createTodoElement(todo, undefined);
+    expect(li.classList.contains('completed')).toBe(false);
+  });
+
+  it('should add completed class when todo is completed', () => {
+    const todo = { id: 1, text: 'Buy milk', completed: true };
+    const li = createTodoElement(todo, undefined);
+    expect(li.classList.contains('completed')).toBe(true);
+  });
+
+  it('should call onToggle with the todo id when checkbox is changed', () => {
+    const todo = { id: 42, text: 'Buy milk', completed: false };
+    const onToggle = vi.fn();
+    const li = createTodoElement(todo, onToggle);
+    const checkbox = li.querySelector('.todo-checkbox');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    expect(onToggle).toHaveBeenCalledWith(42);
+  });
+
+  it('should work without an onToggle callback (backward compatibility)', () => {
+    const todo = { id: 1, text: 'Buy milk', completed: false };
+    const li = createTodoElement(todo);
+    const checkbox = li.querySelector('.todo-checkbox');
+    expect(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event('change'));
+    }).not.toThrow();
   });
 });
 
@@ -105,6 +137,21 @@ describe('renderTodos', () => {
   it('should not throw when #todo-list is missing from the DOM', () => {
     document.body.innerHTML = '';
     addTodo('Should not throw');
+    expect(() => renderTodos()).not.toThrow();
+  });
+
+  it('should pass onToggle to createTodoElement when provided', () => {
+    const onToggle = vi.fn();
+    addTodo('Buy milk');
+    renderTodos(onToggle);
+    const checkbox = document.querySelector('.todo-checkbox');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    expect(onToggle).toHaveBeenCalled();
+  });
+
+  it('should not throw when onToggle is omitted (backward compatibility)', () => {
+    addTodo('Buy milk');
     expect(() => renderTodos()).not.toThrow();
   });
 });
