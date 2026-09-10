@@ -1,17 +1,23 @@
-import { addTodo, toggleTodo, deleteTodo } from './src/addTodo.js';
+import { addTodo, toggleTodo, deleteTodo, todos } from './src/addTodo.js';
 import { renderTodos } from './src/renderTodos.js';
+import { loadTodos, saveTodos } from './src/storage.js';
 
 function handleToggle(id) {
   toggleTodo(id);
+  saveTodos(todos);
   renderTodos(handleToggle, handleDelete);
 }
 
 function handleDelete(id) {
   deleteTodo(id);
+  saveTodos(todos);
   renderTodos(handleToggle, handleDelete);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const loaded = loadTodos();
+  if (loaded.length) todos.push(...loaded);
+
   const todoInput = document.getElementById("todo-input");
   const todoForm = document.getElementById("todo-form");
 
@@ -20,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const todo = addTodo(todoInput.value);
     if (todo) {
       todoInput.value = "";
+      saveTodos(todos);
       renderTodos(handleToggle, handleDelete);
     }
   });
