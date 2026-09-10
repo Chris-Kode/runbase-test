@@ -72,6 +72,22 @@ describe('createTodoElement', () => {
     expect(onToggle).toHaveBeenCalledWith(42);
   });
 
+  it('should call onDelete with the todo id when delete button is clicked', () => {
+    const todo = { id: 42, text: 'Buy milk', completed: false };
+    const onDelete = vi.fn();
+    const li = createTodoElement(todo, undefined, onDelete);
+    const deleteBtn = li.querySelector('.delete-btn');
+    deleteBtn.click();
+    expect(onDelete).toHaveBeenCalledWith(42);
+  });
+
+  it('should not throw when onDelete is not provided', () => {
+    const todo = { id: 1, text: 'Buy milk', completed: false };
+    const li = createTodoElement(todo);
+    const deleteBtn = li.querySelector('.delete-btn');
+    expect(() => deleteBtn.click()).not.toThrow();
+  });
+
   it('should work without an onToggle callback (backward compatibility)', () => {
     const todo = { id: 1, text: 'Buy milk', completed: false };
     const li = createTodoElement(todo);
@@ -148,6 +164,16 @@ describe('renderTodos', () => {
     checkbox.checked = true;
     checkbox.dispatchEvent(new Event('change'));
     expect(onToggle).toHaveBeenCalled();
+  });
+
+  it('should pass onDelete to createTodoElement when provided', () => {
+    const onToggle = vi.fn();
+    const onDelete = vi.fn();
+    addTodo('Buy milk');
+    renderTodos(onToggle, onDelete);
+    const deleteBtn = document.querySelector('.delete-btn');
+    deleteBtn.click();
+    expect(onDelete).toHaveBeenCalled();
   });
 
   it('should not throw when onToggle is omitted (backward compatibility)', () => {

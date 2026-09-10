@@ -1,9 +1,14 @@
-import { addTodo, toggleTodo, todos } from './src/addTodo.js';
+import { addTodo, toggleTodo, deleteTodo } from './src/addTodo.js';
 import { renderTodos } from './src/renderTodos.js';
 
 function handleToggle(id) {
   toggleTodo(id);
-  renderTodos(handleToggle);
+  renderTodos(handleToggle, handleDelete);
+}
+
+function handleDelete(id) {
+  deleteTodo(id);
+  renderTodos(handleToggle, handleDelete);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -15,11 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const todo = addTodo(todoInput.value);
     if (todo) {
       todoInput.value = "";
-      renderTodos(handleToggle);
+      renderTodos(handleToggle, handleDelete);
     }
   });
 
-  renderTodos(handleToggle);
+  renderTodos(handleToggle, handleDelete);
 
   console.log("Todo app initialized");
 });

@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { addTodo, toggleTodo, todos, clearTodos } from './addTodo.js';
+import { addTodo, toggleTodo, deleteTodo, todos, clearTodos } from './addTodo.js';
+
+// Helper: push a todo with a stable id so Date.now() collisions don't break tests
+function addTodoWithId(id, text, completed = false) {
+  const todo = { id, text, completed };
+  todos.push(todo);
+  return todo;
+}
 
 describe('addTodo', () => {
   beforeEach(() => {
@@ -95,5 +102,55 @@ describe('toggleTodo', () => {
     const todo2 = addTodo('Second');
     toggleTodo(todo1.id);
     expect(todo2.completed).toBe(false);
+  });
+});
+
+describe('deleteTodo', () => {
+  beforeEach(() => {
+    clearTodos();
+  });
+
+  it('should remove the specified todo from the array', () => {
+    const todo = addTodoWithId(1, 'Buy milk');
+    deleteTodo(todo.id);
+    expect(todos).toHaveLength(0);
+  });
+
+  it('should return the removed todo', () => {
+    const todo = addTodoWithId(1, 'Buy milk');
+    const removed = deleteTodo(todo.id);
+    expect(removed).toBeDefined();
+    expect(removed.id).toBe(todo.id);
+    expect(removed.text).toBe('Buy milk');
+  });
+
+  it('should remove only the specified todo and leave others', () => {
+    addTodoWithId(1, 'First');
+    addTodoWithId(2, 'Second');
+    addTodoWithId(3, 'Third');
+    deleteTodo(2);
+    expect(todos).toHaveLength(2);
+    expect(todos.map((t) => t.text)).toEqual(['First', 'Third']);
+  });
+
+  it('should return undefined for a non-existent id', () => {
+    const result = deleteTodo(999999);
+    expect(result).toBeUndefined();
+  });
+
+  it('should not affect remaining todos after deletion', () => {
+    addTodoWithId(1, 'First');
+    const todo2 = addTodoWithId(2, 'Second');
+    deleteTodo(1);
+    expect(todos).toHaveLength(1);
+    expect(todos[0].id).toBe(todo2.id);
+    expect(todos[0].text).toBe('Second');
+    expect(todos[0].completed).toBe(false);
+  });
+
+  it('should work correctly when deleting from an array of one', () => {
+    const todo = addTodoWithId(1, 'Only one');
+    deleteTodo(todo.id);
+    expect(todos).toHaveLength(0);
   });
 });

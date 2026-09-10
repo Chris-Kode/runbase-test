@@ -4,12 +4,12 @@ import { todos } from './addTodo.js';
  * Render all todos into the #todo-list container.
  * Clears existing content first, then rebuilds from the array.
  */
-export function renderTodos(onToggle) {
+export function renderTodos(onToggle, onDelete) {
   const list = document.getElementById('todo-list');
   if (!list) return;
   list.innerHTML = '';
   todos.forEach((todo) => {
-    const li = createTodoElement(todo, onToggle);
+    const li = createTodoElement(todo, onToggle, onDelete);
     list.appendChild(li);
   });
 }
@@ -25,7 +25,7 @@ export function renderTodos(onToggle) {
  *     <button class="delete-btn">✕</button>
  *   </li>
  */
-export function createTodoElement(todo, onToggle) {
+export function createTodoElement(todo, onToggle, onDelete) {
   const li = document.createElement('li');
   li.dataset.id = todo.id;
   li.className = 'todo-item';
@@ -52,6 +52,12 @@ export function createTodoElement(todo, onToggle) {
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'delete-btn';
   deleteBtn.textContent = '✕';
+
+  if (onDelete) {
+    deleteBtn.addEventListener('click', () => {
+      onDelete(todo.id);
+    });
+  }
 
   li.appendChild(checkbox);
   li.appendChild(span);
