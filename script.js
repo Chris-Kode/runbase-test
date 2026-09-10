@@ -1,4 +1,4 @@
-import { addTodo, toggleTodo, deleteTodo, todos } from './src/addTodo.js';
+import { addTodo, toggleTodo, deleteTodo } from './src/addTodo.js';
 import { renderTodos } from './src/renderTodos.js';
 
 function handleToggle(id) {
