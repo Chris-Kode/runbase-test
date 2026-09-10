@@ -27,13 +27,12 @@ describe('loadTodos', () => {
   });
 
   it('returns [] if localStorage.getItem throws', () => {
-    const original = localStorage.getItem.bind(localStorage);
-    localStorage.getItem = vi.fn(() => {
+    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new Error('Access denied');
     });
     const result = loadTodos();
     expect(result).toEqual([]);
-    localStorage.getItem = original;
+    vi.restoreAllMocks();
   });
 });
 
@@ -50,12 +49,11 @@ describe('saveTodos', () => {
   });
 
   it('handles localStorage.setItem throwing', () => {
-    const original = localStorage.setItem.bind(localStorage);
-    localStorage.setItem = vi.fn(() => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('Quota exceeded');
     });
     expect(() => saveTodos([{ id: 1, text: 'Test', completed: false }])).not.toThrow();
-    localStorage.setItem = original;
+    vi.restoreAllMocks();
   });
 
   it('round-trip preserves todo fields', () => {
