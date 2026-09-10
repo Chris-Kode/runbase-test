@@ -1,114 +1,121 @@
 # runbase.config.yaml — agent pipeline: plan → implement → review → fix → merge.
-#
-# Flow:
-#   1. Label an issue "ready-to-plan"  → agent writes the technical plan.
-#      Runbase then labels the issue "ready-to-code".
-#   2. Label an issue "ready-to-code"  → agent implements and opens a PR.
-#      Runbase then labels the PR "ready-to-review".
-#   3. Label a PR "ready-to-review"    → agent reviews the spec and the code
-#      standards and posts the review comment. Runbase then labels the PR
-#      "ready-to-fix".
-#   4. Label a PR "ready-to-fix"       → agent applies the review fixes.
-#      Runbase then enables auto-merge.
-automations:
-  # Step 1 — plan the issue.
-  - name: plan
-    on:
-      issue:
-        action: labeled
-        labels: [ready-to-plan]
-        blocked: false
-    run:
-      provider: my-provider
-      model: zai/glm-5.3-flash
-      thinking: high
-      prompt: >-
-        Write the technical plan for issue {{ issue.number }}: {{ issue.title }}.
+   #
+   # Flow:
+   #   1. Label an issue "ready-to-plan"  → agent writes the technical plan.
+   #      Runbase then labels the issue "ready-to-code".
+   #   2. Label an issue "ready-to-code"  → agent implements and opens a PR.
+   #      Runbase then labels the PR "ready-to-review".
+   #   3. Label a PR "ready-to-review"    → agent reviews the spec and the code
+   #      standards and posts the review comment. Runbase then labels the PR
+   #      "ready-to-fix".
+   #   4. Label a PR "ready-to-fix"       → agent applies the review fixes.
+   #      Runbase then enables auto-merge.
+   #
+   # Delivery Labels name a target. `issue` is the triggering issue.
+   # `pull_request` is the pull request the Delivery publishes.
+   automations:
+     # Step 1 — plan the issue.
+     - name: plan
+       on:
+         issue:
+           action: labeled
+           labels: [ready-to-plan]
+           blocked: false
+       run:
+         provider: my-provider
+         model: zai/glm-5.3-flash
+         thinking: high
+         prompt: >-
+           Write the technical plan for issue {{ issue.number }}: {{ issue.title }}.
 
-        Original issue body:
+           Original issue body:
 
-        {{ issue.body }}
+           {{ issue.body }}
 
-        Read the issue comments first. Produce a step-by-step technical plan:
-        files to touch, changes per file, and a test plan. Follow the coding
-        standards in AGENTS.md. Post the plan as the final comment.
-    delivery:
-      type: comment
-      labels: [ready-to-code]
+           Read the issue comments first. Produce a step-by-step technical plan:
+           files to touch, changes per file, and a test plan. Follow the coding
+           standards in AGENTS.md. Post the plan as the final comment.
+       delivery:
+         type: comment
+         labels:
+           issue: [ready-to-code]
 
-  # Step 2 — implement the plan and open the pull request.
-  - name: implement
-    on:
-      issue:
-        action: labeled
-        labels: [ready-to-plan, ready-to-code]
-        blocked: false
-    run:
-      provider: my-provider
-      model: zai/glm-5.3-flash
-      thinking: high
-      prompt: >-
-        Implement issue {{ issue.number }}: {{ issue.title }}.
+     # Step 2 — implement the plan and open the pull request.
+     - name: implement
+       on:
+         issue:
+           action: labeled
+           labels: [ready-to-plan, ready-to-code]
+           blocked: false
+       run:
+         provider: my-provider
+         model: zai/glm-5.3-flash
+         thinking: high
+         prompt: >-
+           Implement issue {{ issue.number }}: {{ issue.title }}.
 
-        Original issue body:
+           Original issue body:
 
-        {{ issue.body }}
+           {{ issue.body }}
 
-        Read the plan from the issue comments. Implement it test-first.
-        Follow the coding standards in AGENTS.md. Open one pull request
-        that closes the issue.
-    delivery:
-      type: pull_request
-      merge:
-        mode: manual
-      labels: [ready-to-review]
+           Read the plan from the issue comments. Implement it test-first.
+           Follow the coding standards in AGENTS.md. Open one pull request
+           that closes the issue.
+       delivery:
+         type: pull_request
+         merge:
+           mode: manual
+         labels:
+           # The PR target is the pull request Runbase publishes for this issue.
+           pull_request: [ready-to-review]
 
-  # Step 3 — review the implementation.
-  - name: review
-    on:
-      pull_request:
-        action: labeled
-        labels: [ready-to-review]
-    run:
-      provider: my-provider
-      model: zai/glm-5.3-flash
-      thinking: high
-      prompt: >-
-        Review pull request {{ pull_request.number }}: {{ pull_request.title }}.
+     # Step 3 — review the implementation.
+     - name: review
+       on:
+         pull_request:
+           action: labeled
+           labels: [ready-to-review]
+       run:
+         provider: my-provider
+         model: zai/glm-5.3-flash
+         thinking: high
+         prompt: >-
+           Review pull request {{ pull_request.number }}: {{ pull_request.title }}.
 
-        Pull request body:
+           Pull request body:
 
-        {{ pull_request.body }}
+           {{ pull_request.body }}
 
-        Check the diff against the linked issue spec and against the coding
-        standards in AGENTS.md. Verify every spec item is done and every
-        quality gate passes. Post one review comment with the findings and
-        the verdict.
-    delivery:
-      type: comment
-      labels: [ready-to-fix]
+           Check the diff against the linked issue spec and against the coding
+           standards in AGENTS.md. Verify every spec item is done and every
+           quality gate passes. Post one review comment with the findings and
+           the verdict.
+       delivery:
+         type: comment
+         labels:
+           pull_request: [ready-to-fix]
 
-  # Step 4 — fix per the review comments, then auto-merge.
-  - name: fix
-    on:
-      pull_request:
-        action: labeled
-        labels: [ready-to-review, ready-to-fix]
-    run:
-      provider: my-provider
-      model: zai/glm-5.3-flash
-      thinking: high
-      prompt: >-
-        Fix pull request {{ pull_request.number }}: {{ pull_request.title }}.
+     # Step 4 — fix per the review comments, then auto-merge.
+     - name: fix
+       on:
+         pull_request:
+           action: labeled
+           labels: [ready-to-review, ready-to-fix]
+       run:
+         provider: my-provider
+         model: zai/glm-5.3-flash
+         thinking: high
+         prompt: >-
+           Fix pull request {{ pull_request.number }}: {{ pull_request.title }}.
 
-        Pull request body:
+           Pull request body:
 
-        {{ pull_request.body }}
+           {{ pull_request.body }}
 
-        Read the review comments. Apply every requested fix. Follow the
-        coding standards in AGENTS.md.
-    delivery:
-      type: pull_request
-      merge:
-        mode: automatic
-        method: squash
+           Read the review comments. Apply every requested fix. Follow the
+           coding standards in AGENTS.md.
+       delivery:
+         type: pull_request
+         merge:
+           mode: automatic
+           method: squash
