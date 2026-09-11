@@ -1,4 +1,7 @@
 {
   "name": "runbase-test",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/design.test.mjs"
+  }
 }

@@ -5,45 +5,183 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List</title>
     <style>
+      /* 1. Design tokens */
+      :root {
+        color-scheme: light dark;
+
+        --color-bg-1: #eef2ff;
+        --color-bg-2: #f8fafc;
+        --color-surface: #ffffff;
+        --color-border: #e2e8f0;
+        --color-text: #1e293b;
+        --color-text-muted: #64748b;
+        --color-accent: #6366f1;
+        --color-accent-hover: #4f46e5;
+        --color-accent-contrast: #ffffff;
+        --color-accent-halo: rgb(99 102 241 / 0.14);
+        --color-accent-soft: rgb(99 102 241 / 0.06);
+        --color-accent-ring: rgb(99 102 241 / 0.25);
+        --color-accent-glow: rgb(79 70 229 / 0.3);
+        --color-danger: #ef4444;
+        --color-danger-soft: rgb(239 68 68 / 0.12);
+        --color-focus: #6366f1;
+
+        --radius-card: 16px;
+        --radius-control: 10px;
+        --radius-row: 10px;
+
+        --shadow-card:
+          0 1px 2px rgb(15 23 42 / 0.04),
+          0 8px 24px rgb(15 23 42 / 0.08);
+        --shadow-accent:
+          0 1px 2px rgb(79 70 229 / 0.35),
+          0 4px 12px rgb(79 70 229 / 0.25);
+
+        --space-1: 0.5rem;
+        --space-2: 0.75rem;
+        --space-3: 1rem;
+        --space-4: 1.5rem;
+        --space-5: 2rem;
+
+        --speed: 150ms;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-bg-1: #0f172a;
+          --color-bg-2: #1e1b4b;
+          --color-surface: #1e293b;
+          --color-border: #334155;
+          --color-text: #e2e8f0;
+          --color-text-muted: #94a3b8;
+          --color-accent: #818cf8;
+          --color-accent-hover: #6366f1;
+          --color-accent-contrast: #0f172a;
+          --color-accent-halo: rgb(129 140 248 / 0.14);
+          --color-accent-soft: rgb(129 140 248 / 0.08);
+          --color-accent-ring: rgb(129 140 248 / 0.3);
+          --color-accent-glow: rgb(99 102 241 / 0.3);
+          --color-danger: #f87171;
+          --color-danger-soft: rgb(248 113 113 / 0.14);
+          --color-focus: #818cf8;
+
+          --shadow-card:
+            0 1px 2px rgb(0 0 0 / 0.4),
+            0 8px 24px rgb(0 0 0 / 0.35);
+          --shadow-accent:
+            0 1px 2px rgb(0 0 0 / 0.4),
+            0 4px 12px rgb(99 102 241 / 0.3);
+        }
+      }
+
+      /* 2. Reset / base */
       * {
         box-sizing: border-box;
       }
 
       body {
-        max-width: 480px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-        color: #222;
+        min-height: 100vh;
+        margin: 0;
+        padding: var(--space-5) var(--space-3);
+        display: grid;
+        place-items: start center;
+        background:
+          radial-gradient(
+            60rem 60rem at 120% -10%,
+            var(--color-accent-halo),
+            transparent 60%
+          ),
+          linear-gradient(160deg, var(--color-bg-1), var(--color-bg-2));
+        color: var(--color-text);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
       }
 
-      main {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+      /* 3. Layout: shell, card, header */
+      .app-card {
+        width: 100%;
+        max-width: 480px;
+        margin-top: var(--space-5);
+        padding: var(--space-4);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
       }
 
+      header {
+        margin-bottom: var(--space-3);
+      }
+
+      h1 {
+        margin: 0 0 var(--space-1);
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+      }
+
+      /* 4. Form controls */
       #todo-form {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: var(--space-1);
       }
 
       #todo-input {
         flex: 1 1 16rem;
         min-width: 0;
-        padding: 0.6rem;
+        padding: 0.6rem var(--space-3);
+        background: var(--color-bg-2);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-control);
         font: inherit;
+        transition:
+          border-color var(--speed) ease,
+          box-shadow var(--speed) ease;
+      }
+
+      #todo-input::placeholder {
+        color: var(--color-text-muted);
       }
 
       #add-btn {
         padding: 0.6rem 1rem;
+        background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+        color: var(--color-accent-contrast);
+        border: none;
+        border-radius: var(--radius-control);
+        box-shadow: var(--shadow-accent);
         font: inherit;
+        font-weight: 600;
         cursor: pointer;
+        transition:
+          transform var(--speed) ease,
+          box-shadow var(--speed) ease,
+          filter var(--speed) ease;
       }
 
+      #add-btn:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-accent), 0 6px 16px var(--color-accent-glow);
+      }
+
+      #add-btn:active {
+        transform: translateY(0);
+        filter: brightness(0.96);
+      }
+
+      /* 5. Todo list & items */
       #todo-list {
-        margin: 0;
+        margin: var(--space-2) 0 0;
         padding: 0;
         list-style: none;
       }
@@ -51,50 +189,123 @@
       .todo-item {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #eee;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-1);
+        border-radius: var(--radius-row);
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color var(--speed) ease;
+      }
+
+      .todo-item:hover {
+        background: var(--color-accent-soft);
+      }
+
+      .todo-item:last-child {
+        border-bottom: none;
       }
 
       .todo-checkbox {
         flex-shrink: 0;
         width: 1.2rem;
         height: 1.2rem;
+        margin: 0;
+        accent-color: var(--color-accent);
         cursor: pointer;
+        transition: transform var(--speed) ease;
+      }
+
+      .todo-checkbox:checked {
+        transform: scale(1.1);
       }
 
       .todo-text {
         flex: 1;
         min-width: 0;
         word-break: break-word;
+        transition: opacity var(--speed) ease;
       }
 
       .todo-item.completed .todo-text {
         text-decoration: line-through;
-        color: #999;
+        color: var(--color-text-muted);
+        opacity: 0.85;
       }
 
       .delete-btn {
         flex-shrink: 0;
-        padding: 0.3rem 0.5rem;
-        border: none;
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
         background: transparent;
-        color: #999;
+        color: var(--color-text-muted);
+        border: none;
+        border-radius: 50%;
         font: inherit;
+        line-height: 1;
         cursor: pointer;
+        transition:
+          color var(--speed) ease,
+          background-color var(--speed) ease;
       }
 
       .delete-btn:hover {
-        color: #e33;
+        background: var(--color-danger-soft);
+        color: var(--color-danger);
+      }
+
+      /* 6. Empty state (pure CSS — the <ul> stays whitespace-free) */
+      #todo-list:empty {
+        margin: 0;
+      }
+
+      #todo-list:empty::after {
+        content: "No todos yet — add one above ✨";
+        display: block;
+        padding: var(--space-4) var(--space-1);
+        text-align: center;
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+        border: 1px dashed var(--color-border);
+        border-radius: var(--radius-control);
+      }
+
+      /* 7. Motion & accessibility */
+      :focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+
+      #todo-input:focus-visible {
+        border-color: var(--color-focus);
+        box-shadow: 0 0 0 3px var(--color-accent-ring);
+        outline: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
+
+        #add-btn:hover,
+        #add-btn:active {
+          transform: none;
+        }
       }
     </style>
   </head>
   <body>
-    <header>
-      <h1>Todo List</h1>
-    </header>
+    <main class="app-card">
+      <header>
+        <h1>Todo List</h1>
+        <p class="subtitle">Stay on top of your day</p>
+      </header>
 
-    <main>
       <form id="todo-form">
         <input id="todo-input" type="text" placeholder="What needs to be done?">
         <button id="add-btn" type="submit">Add</button>
