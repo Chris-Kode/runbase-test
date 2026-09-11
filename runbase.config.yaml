@@ -22,8 +22,8 @@
            labels: [ready-to-plan]
            blocked: false
        run:
-         provider: my-provider
-         model: deepseek/deepseek-v4.1-flash
+         provider: ollama
+         model: glm-5.3-flash
          thinking: high
          prompt: >-
            Write the technical plan for issue {{ issue.number }}: {{ issue.title }}.
@@ -48,8 +48,8 @@
            labels: [ready-to-plan, ready-to-code]
            blocked: false
        run:
-         provider: my-provider
-         model: deepseek/deepseek-v4.1-flash
+         provider: ollama
+         model: glm-5.3-flash
          thinking: high
          prompt: >-
            Implement issue {{ issue.number }}: {{ issue.title }}.
@@ -76,8 +76,8 @@
            action: labeled
            labels: [ready-to-review]
        run:
-         provider: my-provider
-         model: deepseek/deepseek-v4.1-flash
+         provider: ollama
+         model: glm-5.3-flash
          thinking: high
          prompt: >-
            Review pull request {{ pull_request.number }}: {{ pull_request.title }}.
@@ -102,8 +102,8 @@
            action: labeled
            labels: [ready-to-review, ready-to-fix]
        run:
-         provider: my-provider
-         model: deepseek/deepseek-v4.1-flash
+         provider: ollama
+         model: glm-5.3-flash
          thinking: high
          prompt: >-
            Fix pull request {{ pull_request.number }}: {{ pull_request.title }}.
