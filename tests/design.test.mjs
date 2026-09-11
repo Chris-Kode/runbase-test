@@ -9,13 +9,26 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const styleBlock = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
 const scriptBlock = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
 
-/** The <script> block must be byte-identical to the one at HEAD (CSS-only change). */
-function headScriptBlock() {
-  const headHtml = execFileSync('git', ['show', 'HEAD:index.html'], {
-    encoding: 'utf8',
-    cwd: new URL('..', import.meta.url).pathname,
-  });
-  return headHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
+/**
+ * The <script> block must stay byte-identical to the one captured in
+ * tests/script-block.snapshot.js (the redesign is CSS/markup-only).
+ * The snapshot keeps this test working in git-less CI checkouts; if the
+ * snapshot file is absent, fall back to the block at HEAD.
+ */
+function referenceScriptBlock() {
+  try {
+    return readFileSync(
+      new URL('./script-block.snapshot.js', import.meta.url),
+      'utf8',
+    );
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    const headHtml = execFileSync('git', ['show', 'HEAD:index.html'], {
+      encoding: 'utf8',
+      cwd: new URL('..', import.meta.url).pathname,
+    });
+    return headHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
+  }
 }
 
 function containsStyleRule(rule) {
@@ -23,8 +36,8 @@ function containsStyleRule(rule) {
 }
 
 describe('issue #29 — modern design in raw CSS', () => {
-  it('keeps the <script> block byte-identical to HEAD', () => {
-    assert.equal(scriptBlock, headScriptBlock());
+  it('keeps the <script> block byte-identical to the snapshot', () => {
+    assert.equal(scriptBlock, referenceScriptBlock());
   });
 
   it('keeps all JS hooks intact (ids in markup, classes assigned by the script)', () => {
