@@ -1,6 +1,6 @@
 run:
   ai:
-    provider: ollama
+    provider: ollama-local
     model: deepseek-v4.1-flash
     thinking: xhigh
   sandbox:
