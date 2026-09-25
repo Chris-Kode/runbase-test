@@ -6,7 +6,7 @@ run:
   sandbox:
     provider: boat-provider
     config:
-      type: small
+      size: small
   timeout: 7200
 
 # Delivery Labels name a target. `issue` is the triggering issue.
