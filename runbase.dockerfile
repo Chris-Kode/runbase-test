@@ -8,7 +8,7 @@ FROM node:24-bookworm
    # with its own commands after boot, so this image needs no start step.
 
    # System packages the agent's code needs. git already ships with the
-   # base image, so the clone step works without changes here. okokok
+   # base image, so the clone step works without changes here. okokokok
    RUN apt-get update \
        && apt-get install -y --no-install-recommends \
          curl \
