@@ -130,3 +130,71 @@ describe('issue #29 — modern design in raw CSS', () => {
     assert.ok(/\.todo-item\.completed/.test(styleBlock), 'completed state rule');
   });
 });
+
+describe('issue #31 — neon design', () => {
+  it('defines a neon palette and glow tokens on :root', () => {
+    for (const token of ['--neon-cyan', '--neon-magenta']) {
+      assert.ok(styleBlock.includes(token), `missing neon token: ${token}`);
+    }
+    assert.ok(
+      /--neon-glow-[\w-]+\s*:/.test(styleBlock),
+      'at least one --neon-glow-* token',
+    );
+  });
+
+  it('uses layered neon glow shadows (0 0 offsets)', () => {
+    assert.ok(
+      /box-shadow:\s*[^;]*0 0/.test(styleBlock),
+      'box-shadow with 0 0 glow offset',
+    );
+    const card = styleBlock.match(/\.app-card\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.ok(card.includes('box-shadow'), '.app-card declares box-shadow');
+    assert.ok(
+      /box-shadow:[^;]*,/.test(card),
+      '.app-card box-shadow has multiple layers',
+    );
+  });
+
+  it('renders the title as neon gradient text', () => {
+    assert.ok(
+      /background-clip:\s*text/.test(styleBlock),
+      'background-clip: text',
+    );
+    const h1 = styleBlock.match(/(^|\})\s*h1\s*\{([^}]*)\}/)?.[2] ?? '';
+    assert.ok(/linear-gradient/.test(h1), 'h1 uses a linear-gradient');
+  });
+
+  it('paints a neon grid background without image assets', () => {
+    assert.ok(
+      /repeating-linear-gradient/.test(styleBlock),
+      'repeating-linear-gradient grid',
+    );
+  });
+
+  it('adds keyframes while keeping the reduced-motion guard', () => {
+    assert.ok(/@keyframes\s+[\w-]+/.test(styleBlock), '@keyframes present');
+    assert.ok(
+      containsStyleRule('@media (prefers-reduced-motion: reduce)'),
+      'reduced-motion media query retained',
+    );
+  });
+
+  it('styles neon danger and completed states', () => {
+    assert.ok(styleBlock.includes('text-decoration-color'), 'neon strikethrough color');
+    assert.ok(
+      /\.delete-btn:hover\s*\{[^}]*--color-danger/.test(styleBlock) ||
+        /\.delete-btn:hover\s*\{[^}]*--neon-danger/.test(styleBlock),
+      'delete button uses a neon danger token on hover',
+    );
+  });
+
+  it('keeps completed text legible (opacity >= 0.85)', () => {
+    const completed =
+      styleBlock.match(/\.todo-item\.completed[^{]*\{([^}]*)\}/)?.[1] ?? '';
+    const opacity = Number(completed.match(/opacity:\s*([\d.]+)/)?.[1]);
+    assert.ok(
+      Number.isFinite(opacity) && opacity >= 0.85,
+      `completed opacity should be >= 0.85, got ${opacity}`,
+    );
+  });
+});
