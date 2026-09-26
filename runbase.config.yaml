@@ -4,9 +4,9 @@ run:
     model: deepseek-v4.1-flash
     thinking: xhigh
   sandbox:
-    provider: boat-provider
+    provider: vercel-provider
     config:
-      size: small
+      vcpu: 2
   timeout: 7200
 
 # Delivery Labels name a target. `issue` is the triggering issue.
