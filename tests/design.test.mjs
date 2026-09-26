@@ -35,6 +35,26 @@ function containsStyleRule(rule) {
   return styleBlock.includes(rule);
 }
 
+/**
+ * Return the body of the first block whose prelude contains `needle`, using
+ * brace matching so nested rules do not truncate the result.
+ */
+function extractBlock(css, needle) {
+  const start = css.indexOf(needle);
+  if (start === -1) return '';
+  const open = css.indexOf('{', start);
+  if (open === -1) return '';
+  let depth = 0;
+  for (let i = open; i < css.length; i += 1) {
+    if (css[i] === '{') depth += 1;
+    else if (css[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return css.slice(open + 1, i);
+    }
+  }
+  return '';
+}
+
 describe('issue #29 — modern design in raw CSS', () => {
   it('keeps the <script> block byte-identical to the snapshot', () => {
     assert.equal(scriptBlock, referenceScriptBlock());
@@ -128,5 +148,116 @@ describe('issue #29 — modern design in raw CSS', () => {
     assert.ok(containsStyleRule('#add-btn'), 'button rule');
     assert.ok(/accent-color/.test(styleBlock), 'custom checkbox accent');
     assert.ok(/\.todo-item\.completed/.test(styleBlock), 'completed state rule');
+  });
+});
+
+describe('issue #31 — neon design', () => {
+  it('defines a neon palette and glow tokens on :root', () => {
+    for (const token of ['--neon-cyan', '--neon-magenta']) {
+      assert.ok(styleBlock.includes(token), `missing neon token: ${token}`);
+    }
+    assert.ok(
+      /--neon-glow-[\w-]+\s*:/.test(styleBlock),
+      'at least one --neon-glow-* token',
+    );
+  });
+
+  it('uses layered neon glow shadows (0 0 offsets)', () => {
+    assert.ok(
+      /box-shadow:\s*[^;]*0 0/.test(styleBlock),
+      'box-shadow with 0 0 glow offset',
+    );
+    const card = styleBlock.match(/\.app-card\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.ok(card.includes('box-shadow'), '.app-card declares box-shadow');
+    assert.ok(
+      /box-shadow:[^;]*,/.test(card),
+      '.app-card box-shadow has multiple layers',
+    );
+  });
+
+  it('renders the title as neon gradient text', () => {
+    assert.ok(
+      /background-clip:\s*text/.test(styleBlock),
+      'background-clip: text',
+    );
+    const h1 = styleBlock.match(/(^|\})\s*h1\s*\{([^}]*)\}/)?.[2] ?? '';
+    assert.ok(/linear-gradient/.test(h1), 'h1 uses a linear-gradient');
+  });
+
+  it('paints a neon grid background without image assets', () => {
+    assert.ok(
+      /repeating-linear-gradient/.test(styleBlock),
+      'repeating-linear-gradient grid',
+    );
+  });
+
+  it('adds keyframes while keeping the reduced-motion guard', () => {
+    assert.ok(/@keyframes\s+[\w-]+/.test(styleBlock), '@keyframes present');
+    assert.ok(
+      containsStyleRule('@media (prefers-reduced-motion: reduce)'),
+      'reduced-motion media query retained',
+    );
+  });
+
+  it('styles neon danger and completed states', () => {
+    assert.ok(styleBlock.includes('text-decoration-color'), 'neon strikethrough color');
+    assert.ok(
+      /\.delete-btn:hover\s*\{[^}]*--color-danger/.test(styleBlock) ||
+        /\.delete-btn:hover\s*\{[^}]*--neon-danger/.test(styleBlock),
+      'delete button uses a neon danger token on hover',
+    );
+  });
+
+  it('keeps completed text legible (opacity >= 0.85)', () => {
+    const completed =
+      styleBlock.match(/\.todo-item\.completed[^{]*\{([^}]*)\}/)?.[1] ?? '';
+    const opacity = Number(completed.match(/opacity:\s*([\d.]+)/)?.[1]);
+    assert.ok(
+      Number.isFinite(opacity) && opacity >= 0.85,
+      `completed opacity should be >= 0.85, got ${opacity}`,
+    );
+  });
+
+  it('keeps the dark-mode body background reachable in the cascade', () => {
+    const darkMedia = extractBlock(styleBlock, '@media (prefers-color-scheme: dark)');
+    const darkBody = darkMedia.match(/\bbody\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(darkBody, /background\s*:/, 'dark body rule declares a background');
+    const baseBody = styleBlock.search(/(^|\s)body\s*\{/);
+    const darkMediaIndex = styleBlock.indexOf('@media (prefers-color-scheme: dark)');
+    assert.ok(
+      darkMediaIndex > baseBody,
+      'dark body override must come after the base body rule to win the cascade',
+    );
+  });
+
+  it('provides an explicit non-blur fallback for backdrop-filter', () => {
+    const fallback = extractBlock(styleBlock, '@supports not');
+    assert.match(fallback, /\.app-card/, 'fallback targets .app-card');
+    assert.match(fallback, /background\s*:/, 'fallback sets an opaque background');
+  });
+
+  it('gives the todo input a translucent field', () => {
+    assert.match(
+      styleBlock,
+      /--color-field:\s*rgb\([^;]*\/\s*0?\.\d+\)/,
+      'translucent --color-field token',
+    );
+    const input = styleBlock.match(/#todo-input\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(input, /background:\s*var\(--color-field\)/, '#todo-input uses the field token');
+  });
+
+  it('actually uses the neon lime token, not just defines it', () => {
+    const occurrences = styleBlock.match(/--neon-lime/g)?.length ?? 0;
+    assert.ok(
+      occurrences >= 2,
+      `--neon-lime should be defined and consumed, found ${occurrences} occurrences`,
+    );
+  });
+
+  it('avoids background-attachment: fixed to prevent mobile scroll jank', () => {
+    assert.ok(
+      !/background-attachment\s*:\s*fixed/.test(styleBlock),
+      'no background-attachment: fixed',
+    );
   });
 });

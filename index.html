@@ -5,37 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List</title>
     <style>
-      /* 1. Design tokens */
+      /* 1. Design tokens — neon (dark-first) */
       :root {
         color-scheme: light dark;
 
-        --color-bg-1: #eef2ff;
-        --color-bg-2: #f8fafc;
+        --color-bg-1: #e8ebff;
+        --color-bg-2: #f5f3ff;
         --color-surface: #ffffff;
-        --color-border: #e2e8f0;
-        --color-text: #1e293b;
-        --color-text-muted: #64748b;
-        --color-accent: #6366f1;
-        --color-accent-hover: #4f46e5;
-        --color-accent-contrast: #ffffff;
-        --color-accent-halo: rgb(99 102 241 / 0.14);
-        --color-accent-soft: rgb(99 102 241 / 0.06);
-        --color-accent-ring: rgb(99 102 241 / 0.25);
-        --color-accent-glow: rgb(79 70 229 / 0.3);
-        --color-danger: #ef4444;
-        --color-danger-soft: rgb(239 68 68 / 0.12);
-        --color-focus: #6366f1;
+        --color-field: rgb(255 255 255 / 0.65);
+        --color-border: #d9dcf3;
+        --color-text: #10152b;
+        --color-text-muted: #4b5170;
+        --color-accent: #7c3aed;
+        --color-accent-hover: #db2777;
+        --color-accent-contrast: #0a0614;
+        --color-accent-halo: rgb(124 58 237 / 0.16);
+        --color-accent-soft: rgb(0 240 255 / 0.1);
+        --color-accent-ring: rgb(124 58 237 / 0.3);
+        --color-accent-glow: rgb(255 43 214 / 0.35);
+        --color-danger: #e11d48;
+        --color-danger-soft: rgb(225 29 72 / 0.12);
+        --color-focus: #7c3aed;
+
+        /* Neon palette */
+        --neon-cyan: #00f0ff;
+        --neon-magenta: #ff2bd6;
+        --neon-purple: #a855f7;
+        --neon-lime: #b6ff3d;
+        --neon-danger: #ff3b6b;
+        --neon-glow-cyan: rgb(0 240 255 / 0.55);
+        --neon-glow-magenta: rgb(255 43 214 / 0.55);
+        --neon-glow-purple: rgb(168 85 247 / 0.5);
+        --neon-border: rgb(0 240 255 / 0.35);
 
         --radius-card: 16px;
         --radius-control: 10px;
         --radius-row: 10px;
 
         --shadow-card:
-          0 1px 2px rgb(15 23 42 / 0.04),
-          0 8px 24px rgb(15 23 42 / 0.08);
+          0 0 0 1px rgb(255 255 255 / 0.7) inset,
+          0 1px 2px rgb(15 23 42 / 0.06),
+          0 0 22px rgb(124 58 237 / 0.22),
+          0 8px 30px rgb(15 23 42 / 0.1);
         --shadow-accent:
-          0 1px 2px rgb(79 70 229 / 0.35),
-          0 4px 12px rgb(79 70 229 / 0.25);
+          0 0 0 1px rgb(255 255 255 / 0.25) inset,
+          0 1px 2px rgb(124 58 237 / 0.4),
+          0 0 16px var(--neon-glow-cyan),
+          0 4px 14px rgb(255 43 214 / 0.35);
 
         --space-1: 0.5rem;
         --space-2: 0.75rem;
@@ -44,34 +60,6 @@
         --space-5: 2rem;
 
         --speed: 150ms;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --color-bg-1: #0f172a;
-          --color-bg-2: #1e1b4b;
-          --color-surface: #1e293b;
-          --color-border: #334155;
-          --color-text: #e2e8f0;
-          --color-text-muted: #94a3b8;
-          --color-accent: #818cf8;
-          --color-accent-hover: #6366f1;
-          --color-accent-contrast: #0f172a;
-          --color-accent-halo: rgb(129 140 248 / 0.14);
-          --color-accent-soft: rgb(129 140 248 / 0.08);
-          --color-accent-ring: rgb(129 140 248 / 0.3);
-          --color-accent-glow: rgb(99 102 241 / 0.3);
-          --color-danger: #f87171;
-          --color-danger-soft: rgb(248 113 113 / 0.14);
-          --color-focus: #818cf8;
-
-          --shadow-card:
-            0 1px 2px rgb(0 0 0 / 0.4),
-            0 8px 24px rgb(0 0 0 / 0.35);
-          --shadow-accent:
-            0 1px 2px rgb(0 0 0 / 0.4),
-            0 4px 12px rgb(99 102 241 / 0.3);
-        }
       }
 
       /* 2. Reset / base */
@@ -91,11 +79,90 @@
             var(--color-accent-halo),
             transparent 60%
           ),
+          radial-gradient(
+            40rem 40rem at -10% 110%,
+            rgb(255 43 214 / 0.14),
+            transparent 60%
+          ),
+          radial-gradient(
+            28rem 28rem at 50% -5%,
+            rgb(0 240 255 / 0.12),
+            transparent 70%
+          ),
+          repeating-linear-gradient(
+            0deg,
+            rgb(0 240 255 / 0.06) 0 1px,
+            transparent 1px 44px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            rgb(0 240 255 / 0.06) 0 1px,
+            transparent 1px 44px
+          ),
           linear-gradient(160deg, var(--color-bg-1), var(--color-bg-2));
         color: var(--color-text);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-bg-1: #05010d;
+          --color-bg-2: #0a0618;
+          --color-surface: rgb(20 10 40 / 0.72);
+          --color-field: rgb(255 255 255 / 0.06);
+          --color-border: rgb(0 240 255 / 0.18);
+          --color-text: #eaf6ff;
+          --color-text-muted: #9aa7c7;
+          --color-accent: #00f0ff;
+          --color-accent-hover: #ff2bd6;
+          --color-accent-contrast: #05010d;
+          --color-accent-halo: rgb(0 240 255 / 0.14);
+          --color-accent-soft: rgb(0 240 255 / 0.1);
+          --color-accent-ring: rgb(0 240 255 / 0.35);
+          --color-accent-glow: rgb(0 240 255 / 0.45);
+          --color-danger: #ff3b6b;
+          --color-danger-soft: rgb(255 59 107 / 0.16);
+          --color-focus: #00f0ff;
+
+          --shadow-card:
+            0 0 0 1px rgb(0 240 255 / 0.14) inset,
+            0 0 24px rgb(0 240 255 / 0.16),
+            0 0 60px rgb(168 85 247 / 0.18),
+            0 18px 50px rgb(0 0 0 / 0.6);
+          --shadow-accent:
+            0 0 0 1px rgb(255 255 255 / 0.2) inset,
+            0 0 16px var(--neon-glow-cyan),
+            0 0 34px var(--neon-glow-magenta),
+            0 4px 14px rgb(0 0 0 / 0.5);
+        }
+
+        body {
+          background:
+            radial-gradient(
+              60rem 60rem at 120% -10%,
+              rgb(255 43 214 / 0.22),
+              transparent 60%
+            ),
+            radial-gradient(
+              42rem 42rem at -10% 110%,
+              rgb(0 240 255 / 0.2),
+              transparent 60%
+            ),
+            repeating-linear-gradient(
+              0deg,
+              rgb(0 240 255 / 0.08) 0 1px,
+              transparent 1px 44px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              rgb(0 240 255 / 0.08) 0 1px,
+              transparent 1px 44px
+            ),
+            linear-gradient(160deg, var(--color-bg-1), var(--color-bg-2));
+          text-shadow: 0 0 18px rgb(0 240 255 / 0.14);
+        }
       }
 
       /* 3. Layout: shell, card, header */
@@ -105,9 +172,19 @@
         margin-top: var(--space-5);
         padding: var(--space-4);
         background: var(--color-surface);
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--neon-border);
         border-radius: var(--radius-card);
-        box-shadow: var(--shadow-card);
+        box-shadow: var(--shadow-card), 0 0 40px var(--neon-glow-purple);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        animation: neon-pulse 6s ease-in-out infinite alternate;
+      }
+
+      /* Non-blur fallback: keep the card opaque enough to stay legible. */
+      @supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
+        .app-card {
+          background: var(--color-bg-2);
+        }
       }
 
       header {
@@ -119,6 +196,17 @@
         font-size: 1.5rem;
         font-weight: 700;
         letter-spacing: -0.02em;
+        background: linear-gradient(
+          90deg,
+          var(--neon-cyan),
+          var(--neon-magenta),
+          var(--neon-purple)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 0 8px var(--neon-glow-cyan));
+        animation: neon-sheen 5s ease-in-out infinite alternate;
       }
 
       .subtitle {
@@ -138,7 +226,7 @@
         flex: 1 1 16rem;
         min-width: 0;
         padding: 0.6rem var(--space-3);
-        background: var(--color-bg-2);
+        background: var(--color-field);
         color: var(--color-text);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-control);
@@ -154,11 +242,11 @@
 
       #add-btn {
         padding: 0.6rem 1rem;
-        background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+        background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
         color: var(--color-accent-contrast);
         border: none;
         border-radius: var(--radius-control);
-        box-shadow: var(--shadow-accent);
+        box-shadow: var(--shadow-accent), 0 0 18px var(--neon-glow-cyan);
         font: inherit;
         font-weight: 600;
         cursor: pointer;
@@ -171,12 +259,13 @@
       #add-btn:hover {
         filter: brightness(1.08);
         transform: translateY(-1px);
-        box-shadow: var(--shadow-accent), 0 6px 16px var(--color-accent-glow);
+        box-shadow: var(--shadow-accent), 0 0 28px var(--neon-glow-magenta);
       }
 
       #add-btn:active {
         transform: translateY(0);
         filter: brightness(0.96);
+        box-shadow: var(--shadow-accent);
       }
 
       /* 5. Todo list & items */
@@ -193,11 +282,17 @@
         padding: var(--space-2) var(--space-1);
         border-radius: var(--radius-row);
         border-bottom: 1px solid var(--color-border);
-        transition: background-color var(--speed) ease;
+        border-left: 3px solid transparent;
+        transition:
+          background-color var(--speed) ease,
+          box-shadow var(--speed) ease,
+          border-color var(--speed) ease;
       }
 
       .todo-item:hover {
         background: var(--color-accent-soft);
+        border-left-color: var(--neon-cyan);
+        box-shadow: inset 0 0 18px rgb(0 240 255 / 0.12);
       }
 
       .todo-item:last-child {
@@ -209,13 +304,16 @@
         width: 1.2rem;
         height: 1.2rem;
         margin: 0;
-        accent-color: var(--color-accent);
+        accent-color: var(--neon-cyan);
         cursor: pointer;
-        transition: transform var(--speed) ease;
+        transition:
+          transform var(--speed) ease,
+          box-shadow var(--speed) ease;
       }
 
       .todo-checkbox:checked {
         transform: scale(1.1);
+        box-shadow: 0 0 10px var(--neon-lime);
       }
 
       .todo-text {
@@ -227,8 +325,10 @@
 
       .todo-item.completed .todo-text {
         text-decoration: line-through;
+        text-decoration-color: var(--neon-magenta);
+        text-decoration-thickness: 2px;
         color: var(--color-text-muted);
-        opacity: 0.85;
+        opacity: 0.9;
       }
 
       .delete-btn {
@@ -248,12 +348,14 @@
         cursor: pointer;
         transition:
           color var(--speed) ease,
-          background-color var(--speed) ease;
+          background-color var(--speed) ease,
+          box-shadow var(--speed) ease;
       }
 
       .delete-btn:hover {
         background: var(--color-danger-soft);
         color: var(--color-danger);
+        box-shadow: 0 0 12px var(--neon-danger);
       }
 
       /* 6. Empty state (pure CSS — the <ul> stays whitespace-free) */
@@ -268,19 +370,41 @@
         text-align: center;
         color: var(--color-text-muted);
         font-size: 0.875rem;
-        border: 1px dashed var(--color-border);
+        border: 1px dashed var(--neon-border);
         border-radius: var(--radius-control);
+        box-shadow: inset 0 0 24px rgb(0 240 255 / 0.08);
       }
 
       /* 7. Motion & accessibility */
+      @keyframes neon-pulse {
+        from {
+          box-shadow: var(--shadow-card), 0 0 26px var(--neon-glow-purple);
+        }
+        to {
+          box-shadow: var(--shadow-card), 0 0 52px var(--neon-glow-cyan);
+        }
+      }
+
+      @keyframes neon-sheen {
+        from {
+          filter: drop-shadow(0 0 6px var(--neon-glow-cyan));
+        }
+        to {
+          filter: drop-shadow(0 0 16px var(--neon-glow-magenta));
+        }
+      }
+
       :focus-visible {
-        outline: 2px solid var(--color-focus);
+        outline: 2px solid var(--neon-cyan);
         outline-offset: 2px;
+        box-shadow: 0 0 14px var(--neon-glow-cyan);
       }
 
       #todo-input:focus-visible {
         border-color: var(--color-focus);
-        box-shadow: 0 0 0 3px var(--color-accent-ring);
+        box-shadow:
+          0 0 0 3px var(--color-accent-ring),
+          0 0 14px var(--neon-glow-cyan);
         outline: none;
       }
 
