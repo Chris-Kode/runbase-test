@@ -86,14 +86,15 @@
           const delay = Number.isFinite(options.delay) ? options.delay : 0;
           li.classList.add('is-entering');
           li.style.setProperty('--row-delay', `${delay}ms`);
-          li.addEventListener(
-            'animationend',
-            () => {
-              li.classList.remove('is-entering');
-              li.style.removeProperty('--row-delay');
-            },
-            { once: true },
-          );
+          // Child animations (e.g. check-pop) bubble, so ignore anything that
+          // is not this row's own entrance animation.
+          const onRowEnterEnd = (event) => {
+            if (event.target !== li || event.animationName !== 'row-enter') return;
+            li.removeEventListener('animationend', onRowEnterEnd);
+            li.classList.remove('is-entering');
+            li.style.removeProperty('--row-delay');
+          };
+          li.addEventListener('animationend', onRowEnterEnd);
         }
 
         return li;
@@ -144,13 +145,12 @@
         li.classList.remove('just-toggled');
         void li.offsetWidth;
         li.classList.add('just-toggled');
-        li.addEventListener(
-          'animationend',
-          () => {
-            li.classList.remove('just-toggled');
-          },
-          { once: true },
-        );
+        const onGlowEnd = (event) => {
+          if (event.target !== li || event.animationName !== 'row-glow') return;
+          li.removeEventListener('animationend', onGlowEnd);
+          li.classList.remove('just-toggled');
+        };
+        li.addEventListener('animationend', onGlowEnd);
       }
 
       function handleDelete(id) {
@@ -169,14 +169,20 @@
 
         li.dataset.leaving = '1';
         let done = false;
-        const settle = () => {
+        const settle = (event) => {
+          // Only the row's own row-leave completion may finalize; child
+          // animations bubble and must not settle the row early.
+          if (event && (event.target !== li || event.animationName !== 'row-leave')) {
+            return;
+          }
           if (done) return;
           done = true;
+          li.removeEventListener('animationend', settle);
           finalize();
         };
 
         li.classList.add('is-leaving');
-        li.addEventListener('animationend', settle, { once: true });
+        li.addEventListener('animationend', settle);
         window.setTimeout(settle, 400);
       }
 

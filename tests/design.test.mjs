@@ -381,4 +381,53 @@ describe('issue #33 — professional motion system', () => {
   it('still avoids background-attachment: fixed', () => {
     assert.ok(!/background-attachment\s*:\s*fixed/.test(styleBlock));
   });
+
+  // --- regressions requested in the PR #34 review ---
+
+  it('ignores bubbled animationend events from descendant animations (F1)', () => {
+    // `animationend` bubbles: a child check-pop/glow must never be mistaken
+    // for this element's row-enter/row-glow/row-leave.
+    const sourceGuards = scriptBlock.match(/event\.target\s*!==\s*li/g) ?? [];
+    assert.ok(
+      sourceGuards.length >= 3,
+      `expected a source guard on each animationend handler, found ${sourceGuards.length}`,
+    );
+    for (const name of ['row-enter', 'row-glow', 'row-leave']) {
+      assert.match(
+        scriptBlock,
+        new RegExp(`event\\.animationName\\s*!==\\s*['"]${name}['"]`),
+        `missing animationName guard for ${name}`,
+      );
+    }
+  });
+
+  it('lets row-leave win the cascade over a concurrent row-glow (F3)', () => {
+    const glowIndex = styleBlock.indexOf('.todo-item.just-toggled');
+    const leaveIndex = styleBlock.indexOf('.todo-item.is-leaving');
+    assert.ok(glowIndex !== -1, '.just-toggled rule exists');
+    assert.ok(leaveIndex !== -1, '.is-leaving rule exists');
+    assert.ok(
+      leaveIndex > glowIndex,
+      '.is-leaving must be declared after .just-toggled to override it',
+    );
+  });
+
+  it('replaces the static line-through with the sweep instead of stacking (F2)', () => {
+    const completed =
+      styleBlock.match(/\.todo-item\.completed\s+\.todo-text\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.doesNotMatch(
+      completed,
+      /text-decoration[^;]*line-through/,
+      'completed text must not draw a line-through next to the sweep',
+    );
+    const reduced = extractBlock(
+      styleBlock,
+      '@media (prefers-reduced-motion: reduce)',
+    );
+    assert.match(
+      reduced,
+      /text-decoration:\s*line-through/,
+      'reduced motion keeps line-through as the sweep fallback',
+    );
+  });
 });

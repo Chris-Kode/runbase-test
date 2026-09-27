@@ -38,6 +38,10 @@
         --neon-glow-purple: rgb(168 85 247 / 0.5);
         --neon-border: rgb(0 240 255 / 0.35);
 
+        /* Ambient aurora layer (adapts in the dark-mode block) */
+        --aurora-a: rgb(124 58 237 / 0.16);
+        --aurora-b: rgb(255 43 214 / 0.55);
+
         --radius-card: 16px;
         --radius-control: 10px;
         --radius-row: 10px;
@@ -126,12 +130,12 @@
         background:
           radial-gradient(
             44rem 44rem at 28% 32%,
-            var(--color-accent-halo),
+            var(--aurora-a),
             transparent 65%
           ),
           radial-gradient(
             38rem 38rem at 72% 68%,
-            var(--neon-glow-magenta),
+            var(--aurora-b),
             transparent 65%
           );
         will-change: transform, opacity;
@@ -157,6 +161,8 @@
           --color-danger: #ff3b6b;
           --color-danger-soft: rgb(255 59 107 / 0.16);
           --color-focus: #00f0ff;
+
+          --aurora-a: rgb(0 240 255 / 0.14);
 
           --shadow-card:
             0 0 0 1px rgb(0 240 255 / 0.14) inset,
@@ -367,14 +373,16 @@
         animation-delay: var(--row-delay, 0ms);
       }
 
+      .todo-item.just-toggled {
+        animation: row-glow var(--dur-slow) var(--ease-out);
+      }
+
+      /* Declared after .just-toggled so a row deleted during the glow window
+         still plays row-leave instead of silently keeping row-glow. */
       .todo-item.is-leaving {
         overflow: hidden;
         pointer-events: none;
         animation: row-leave var(--dur-base) var(--ease-in-out) forwards;
-      }
-
-      .todo-item.just-toggled {
-        animation: row-glow var(--dur-slow) var(--ease-out);
       }
 
       .todo-checkbox {
@@ -408,10 +416,8 @@
           background-size var(--dur-slow) var(--ease-out);
       }
 
+      /* The sweep replaces the static line-through so only one line renders. */
       .todo-item.completed .todo-text {
-        text-decoration: line-through;
-        text-decoration-color: var(--neon-magenta);
-        text-decoration-thickness: 2px;
         color: var(--color-text-muted);
         opacity: 0.9;
         background-size: 100% 2px;
@@ -621,6 +627,14 @@
           opacity: 1;
           transform: none;
         }
+
+        /* No sweep transition: fall back to a plain strikethrough. */
+        .todo-item.completed .todo-text {
+          background-size: 0% 2px;
+          text-decoration: line-through;
+          text-decoration-color: var(--neon-magenta);
+          text-decoration-thickness: 2px;
+        }
       }
     </style>
   </head>
@@ -726,14 +740,15 @@
           const delay = Number.isFinite(options.delay) ? options.delay : 0;
           li.classList.add('is-entering');
           li.style.setProperty('--row-delay', `${delay}ms`);
-          li.addEventListener(
-            'animationend',
-            () => {
-              li.classList.remove('is-entering');
-              li.style.removeProperty('--row-delay');
-            },
-            { once: true },
-          );
+          // Child animations (e.g. check-pop) bubble, so ignore anything that
+          // is not this row's own entrance animation.
+          const onRowEnterEnd = (event) => {
+            if (event.target !== li || event.animationName !== 'row-enter') return;
+            li.removeEventListener('animationend', onRowEnterEnd);
+            li.classList.remove('is-entering');
+            li.style.removeProperty('--row-delay');
+          };
+          li.addEventListener('animationend', onRowEnterEnd);
         }
 
         return li;
@@ -784,13 +799,12 @@
         li.classList.remove('just-toggled');
         void li.offsetWidth;
         li.classList.add('just-toggled');
-        li.addEventListener(
-          'animationend',
-          () => {
-            li.classList.remove('just-toggled');
-          },
-          { once: true },
-        );
+        const onGlowEnd = (event) => {
+          if (event.target !== li || event.animationName !== 'row-glow') return;
+          li.removeEventListener('animationend', onGlowEnd);
+          li.classList.remove('just-toggled');
+        };
+        li.addEventListener('animationend', onGlowEnd);
       }
 
       function handleDelete(id) {
@@ -809,14 +823,20 @@
 
         li.dataset.leaving = '1';
         let done = false;
-        const settle = () => {
+        const settle = (event) => {
+          // Only the row's own row-leave completion may finalize; child
+          // animations bubble and must not settle the row early.
+          if (event && (event.target !== li || event.animationName !== 'row-leave')) {
+            return;
+          }
           if (done) return;
           done = true;
+          li.removeEventListener('animationend', settle);
           finalize();
         };
 
         li.classList.add('is-leaving');
-        li.addEventListener('animationend', settle, { once: true });
+        li.addEventListener('animationend', settle);
         window.setTimeout(settle, 400);
       }
 
