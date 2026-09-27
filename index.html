@@ -60,6 +60,16 @@
         --space-5: 2rem;
 
         --speed: 150ms;
+
+        /* Motion system */
+        --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+        --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+        --dur-fast: 140ms;
+        --dur-base: 240ms;
+        --dur-slow: 420ms;
+        --dur-reveal: 620ms;
+        --stagger: 40ms;
       }
 
       /* 2. Reset / base */
@@ -104,6 +114,28 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
+      }
+
+      /* Ambient aurora: fixed, non-interactive, compositor-friendly */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -12%;
+        z-index: -1;
+        pointer-events: none;
+        background:
+          radial-gradient(
+            44rem 44rem at 28% 32%,
+            var(--color-accent-halo),
+            transparent 65%
+          ),
+          radial-gradient(
+            38rem 38rem at 72% 68%,
+            var(--neon-glow-magenta),
+            transparent 65%
+          );
+        will-change: transform, opacity;
+        animation: aurora-drift 34s var(--ease-in-out) infinite;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -177,7 +209,9 @@
         box-shadow: var(--shadow-card), 0 0 40px var(--neon-glow-purple);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
-        animation: neon-pulse 6s ease-in-out infinite alternate;
+        animation:
+          card-enter var(--dur-reveal) var(--ease-out) both,
+          neon-pulse 6s ease-in-out infinite alternate;
       }
 
       /* Non-blur fallback: keep the card opaque enough to stay legible. */
@@ -189,6 +223,8 @@
 
       header {
         margin-bottom: var(--space-3);
+        animation: card-enter var(--dur-reveal) var(--ease-out) both;
+        animation-delay: var(--stagger);
       }
 
       h1 {
@@ -220,6 +256,8 @@
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-1);
+        animation: card-enter var(--dur-reveal) var(--ease-out) both;
+        animation-delay: calc(var(--stagger) * 2);
       }
 
       #todo-input {
@@ -241,6 +279,8 @@
       }
 
       #add-btn {
+        position: relative;
+        overflow: hidden;
         padding: 0.6rem 1rem;
         background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
         color: var(--color-accent-contrast);
@@ -251,9 +291,31 @@
         font-weight: 600;
         cursor: pointer;
         transition:
-          transform var(--speed) ease,
-          box-shadow var(--speed) ease,
-          filter var(--speed) ease;
+          transform var(--dur-base) var(--ease-out),
+          box-shadow var(--dur-base) var(--ease-out),
+          filter var(--dur-base) var(--ease-out);
+      }
+
+      /* Sheen sweep on hover (pointer devices only) */
+      #add-btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          115deg,
+          transparent 20%,
+          rgb(255 255 255 / 0.55) 50%,
+          transparent 80%
+        );
+        transform: translateX(-120%);
+        transition: transform var(--dur-slow) var(--ease-out);
+        pointer-events: none;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        #add-btn:hover::after {
+          transform: translateX(120%);
+        }
       }
 
       #add-btn:hover {
@@ -299,6 +361,22 @@
         border-bottom: none;
       }
 
+      .todo-item.is-entering {
+        contain: paint;
+        animation: row-enter var(--dur-base) var(--ease-out) both;
+        animation-delay: var(--row-delay, 0ms);
+      }
+
+      .todo-item.is-leaving {
+        overflow: hidden;
+        pointer-events: none;
+        animation: row-leave var(--dur-base) var(--ease-in-out) forwards;
+      }
+
+      .todo-item.just-toggled {
+        animation: row-glow var(--dur-slow) var(--ease-out);
+      }
+
       .todo-checkbox {
         flex-shrink: 0;
         width: 1.2rem;
@@ -314,13 +392,20 @@
       .todo-checkbox:checked {
         transform: scale(1.1);
         box-shadow: 0 0 10px var(--neon-lime);
+        animation: check-pop var(--dur-base) var(--ease-spring);
       }
 
       .todo-text {
         flex: 1;
         min-width: 0;
         word-break: break-word;
-        transition: opacity var(--speed) ease;
+        background-image: linear-gradient(currentColor, currentColor);
+        background-repeat: no-repeat;
+        background-position: 0 60%;
+        background-size: 0% 2px;
+        transition:
+          opacity var(--speed) ease,
+          background-size var(--dur-slow) var(--ease-out);
       }
 
       .todo-item.completed .todo-text {
@@ -329,6 +414,7 @@
         text-decoration-thickness: 2px;
         color: var(--color-text-muted);
         opacity: 0.9;
+        background-size: 100% 2px;
       }
 
       .delete-btn {
@@ -373,6 +459,7 @@
         border: 1px dashed var(--neon-border);
         border-radius: var(--radius-control);
         box-shadow: inset 0 0 24px rgb(0 240 255 / 0.08);
+        animation: empty-enter var(--dur-reveal) var(--ease-out) both;
       }
 
       /* 7. Motion & accessibility */
@@ -392,6 +479,109 @@
         to {
           filter: drop-shadow(0 0 16px var(--neon-glow-magenta));
         }
+      }
+
+      @keyframes card-enter {
+        from {
+          opacity: 0;
+          transform: translateY(18px) scale(0.98);
+          filter: blur(6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+
+      @keyframes row-enter {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @keyframes row-leave {
+        from {
+          opacity: 1;
+          max-height: 6rem;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          max-height: 0;
+          padding-top: 0;
+          padding-bottom: 0;
+          transform: translateX(14px);
+        }
+      }
+
+      @keyframes check-pop {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.25);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes row-glow {
+        0% {
+          box-shadow: 0 0 0 0 var(--neon-glow-cyan);
+        }
+        40% {
+          box-shadow: 0 0 18px 2px var(--neon-glow-cyan);
+        }
+        100% {
+          box-shadow: 0 0 0 0 transparent;
+        }
+      }
+
+      @keyframes empty-enter {
+        from {
+          opacity: 0;
+          transform: scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @keyframes aurora-drift {
+        0% {
+          opacity: 0.55;
+          transform: translate3d(-3%, -2%, 0) scale(1);
+        }
+        50% {
+          opacity: 0.9;
+          transform: translate3d(3%, 3%, 0) scale(1.08);
+        }
+        100% {
+          opacity: 0.55;
+          transform: translate3d(-3%, -2%, 0) scale(1);
+        }
+      }
+
+      @keyframes focus-breathe {
+        from {
+          box-shadow: 0 0 10px var(--neon-glow-cyan);
+        }
+        to {
+          box-shadow: 0 0 20px var(--neon-glow-magenta);
+        }
+      }
+
+      .delete-btn:focus-visible,
+      #add-btn:focus-visible {
+        animation: focus-breathe 2.4s var(--ease-in-out) infinite alternate;
       }
 
       :focus-visible {
@@ -418,6 +608,17 @@
 
         #add-btn:hover,
         #add-btn:active {
+          transform: none;
+        }
+
+        #add-btn:hover::after {
+          transform: translateX(-120%);
+        }
+
+        /* Content always resolves to its final, visible state. */
+        .todo-item.is-entering,
+        .todo-item.is-leaving {
+          opacity: 1;
           transform: none;
         }
       }
@@ -483,7 +684,7 @@
         }
       }
 
-      function createTodoElement(todo, onToggle, onDelete) {
+      function createTodoElement(todo, onToggle, onDelete, options = {}) {
         const li = document.createElement('li');
         li.dataset.id = todo.id;
         li.className = 'todo-item';
@@ -521,29 +722,102 @@
         li.appendChild(span);
         li.appendChild(deleteBtn);
 
+        if (options.entering) {
+          const delay = Number.isFinite(options.delay) ? options.delay : 0;
+          li.classList.add('is-entering');
+          li.style.setProperty('--row-delay', `${delay}ms`);
+          li.addEventListener(
+            'animationend',
+            () => {
+              li.classList.remove('is-entering');
+              li.style.removeProperty('--row-delay');
+            },
+            { once: true },
+          );
+        }
+
         return li;
       }
 
-      function renderTodos(onToggle, onDelete) {
+      const STAGGER_MS = 40;
+      const STAGGER_CAP = 8;
+
+      function renderTodos(onToggle, onDelete, entering) {
         const list = document.getElementById('todo-list');
         if (!list) return;
         list.innerHTML = '';
-        todos.forEach((todo) => {
-          const li = createTodoElement(todo, onToggle, onDelete);
+        todos.forEach((todo, index) => {
+          const shouldEnter = entering instanceof Set && entering.has(todo.id);
+          const delay = Math.min(index, STAGGER_CAP) * STAGGER_MS;
+          const li = createTodoElement(todo, onToggle, onDelete, {
+            entering: shouldEnter,
+            delay,
+          });
           list.appendChild(li);
         });
       }
 
+      function prefersReducedMotion() {
+        return (
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        );
+      }
+
       function handleToggle(id) {
-        toggleTodo(id);
+        const todo = toggleTodo(id);
         saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        if (!todo) return;
+
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        if (!li) {
+          renderTodos(handleToggle, handleDelete);
+          return;
+        }
+
+        li.classList.toggle('completed', todo.completed);
+        const checkbox = li.querySelector('.todo-checkbox');
+        if (checkbox) checkbox.checked = todo.completed;
+
+        // Replay the glow on repeated toggles with one forced reflow.
+        li.classList.remove('just-toggled');
+        void li.offsetWidth;
+        li.classList.add('just-toggled');
+        li.addEventListener(
+          'animationend',
+          () => {
+            li.classList.remove('just-toggled');
+          },
+          { once: true },
+        );
       }
 
       function handleDelete(id) {
-        deleteTodo(id);
-        saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        const finalize = () => {
+          deleteTodo(id);
+          saveTodos(todos);
+          renderTodos(handleToggle, handleDelete);
+        };
+
+        if (li && li.dataset.leaving === '1') return;
+        if (!li || prefersReducedMotion()) {
+          finalize();
+          return;
+        }
+
+        li.dataset.leaving = '1';
+        let done = false;
+        const settle = () => {
+          if (done) return;
+          done = true;
+          finalize();
+        };
+
+        li.classList.add('is-leaving');
+        li.addEventListener('animationend', settle, { once: true });
+        window.setTimeout(settle, 400);
       }
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -559,11 +833,11 @@
           if (todo) {
             todoInput.value = "";
             saveTodos(todos);
-            renderTodos(handleToggle, handleDelete);
+            renderTodos(handleToggle, handleDelete, new Set([todo.id]));
           }
         });
 
-        renderTodos(handleToggle, handleDelete);
+        renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
       });
     </script>
   </body>

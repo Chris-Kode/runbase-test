@@ -261,3 +261,124 @@ describe('issue #31 — neon design', () => {
     );
   });
 });
+
+describe('issue #33 — professional motion system', () => {
+  it('defines motion tokens on :root (easing, durations, stagger)', () => {
+    for (const token of [
+      '--ease-out',
+      '--ease-spring',
+      '--ease-in-out',
+      '--dur-fast',
+      '--dur-base',
+      '--dur-slow',
+      '--dur-reveal',
+      '--stagger',
+    ]) {
+      assert.ok(styleBlock.includes(token), `missing motion token: ${token}`);
+    }
+  });
+
+  it('defines the core motion keyframes', () => {
+    for (const name of ['card-enter', 'row-enter', 'row-leave', 'check-pop']) {
+      assert.ok(
+        new RegExp(`@keyframes\\s+${name}\\b`).test(styleBlock),
+        `missing @keyframes ${name}`,
+      );
+    }
+  });
+
+  it('gates row entrance and exit with the is-entering / is-leaving classes', () => {
+    const entering =
+      styleBlock.match(/\.todo-item\.is-entering\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(entering, /row-enter/, '.is-entering uses row-enter');
+    const leaving =
+      styleBlock.match(/\.todo-item\.is-leaving\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(leaving, /row-leave/, '.is-leaving uses row-leave');
+    assert.match(
+      leaving,
+      /pointer-events:\s*none/,
+      '.is-leaving disables pointer events',
+    );
+  });
+
+  it('wires the script to the entrance/exit hooks', () => {
+    for (const hook of [
+      'is-entering',
+      'is-leaving',
+      'animationend',
+      'prefers-reduced-motion',
+    ]) {
+      assert.ok(scriptBlock.includes(hook), `missing script hook: ${hook}`);
+    }
+    assert.match(
+      scriptBlock,
+      /function\s+renderTodos\s*\([^)]*entering/,
+      'renderTodos accepts an entering set',
+    );
+  });
+
+  it('pops the checkbox and sweeps the completed strikethrough', () => {
+    assert.match(styleBlock, /\.todo-checkbox:checked\s*\{[^}]*check-pop/);
+    const doneText =
+      styleBlock.match(/(^|\})\s*\.todo-text\s*\{([^}]*)\}/)?.[2] ?? '';
+    assert.match(doneText, /linear-gradient/, 'sweep is a gradient underline');
+    assert.match(doneText, /background-size:\s*0%/, 'sweep starts collapsed');
+    const completed =
+      styleBlock.match(/\.todo-item\.completed\s+\.todo-text\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(completed, /background-size:\s*100%/, 'completed sweep reaches 100%');
+  });
+
+  it('reveals the card, header, form, and empty state on load', () => {
+    assert.match(styleBlock, /\.app-card\s*\{[^}]*card-enter/);
+    const header = styleBlock.match(/(^|\})\s*header\s*\{([^}]*)\}/)?.[2] ?? '';
+    assert.match(header, /card-enter/);
+    assert.match(styleBlock, /#todo-form\s*\{[^}]*card-enter/);
+    assert.match(styleBlock, /#todo-list:empty::after\s*\{[^}]*empty-enter/);
+  });
+
+  it('drifts a fixed, non-interactive aurora background layer', () => {
+    const aurora = styleBlock.match(/\n\s*body::before\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(aurora, /position:\s*fixed/, 'aurora is fixed');
+    assert.match(aurora, /pointer-events:\s*none/, 'aurora ignores pointer events');
+    assert.match(aurora, /aurora-drift/, 'aurora drifts');
+  });
+
+  it('keeps looping animations compositor-friendly (no layout properties)', () => {
+    const keyframeNames = [...styleBlock.matchAll(/@keyframes\s+([\w-]+)/g)].map(
+      (m) => m[1],
+    );
+    const looping = new Set();
+    for (const decl of styleBlock.match(/animation:[^;]+;/g) ?? []) {
+      if (!/infinite/.test(decl)) continue;
+      for (const name of keyframeNames) {
+        if (new RegExp(`(^|[\\s,])${name}([\\s,;]|$)`).test(decl)) {
+          looping.add(name);
+        }
+      }
+    }
+    assert.ok(looping.size > 0, 'at least one looping animation is declared');
+    const layoutProp =
+      /(?:^|[;{\s])(?:width|height|top|right|bottom|left|margin|padding)(?:-[\w-]+)?\s*:/;
+    for (const name of looping) {
+      const body = extractBlock(styleBlock, `@keyframes ${name}`);
+      assert.ok(body.length > 0, `could not read @keyframes ${name}`);
+      assert.ok(
+        !layoutProp.test(body),
+        `${name} animates a layout property while looping`,
+      );
+    }
+  });
+
+  it('collapses all motion under prefers-reduced-motion', () => {
+    const reduced = extractBlock(
+      styleBlock,
+      '@media (prefers-reduced-motion: reduce)',
+    );
+    assert.match(reduced, /animation:\s*none\s*!important/, 'animation is zeroed');
+    assert.match(reduced, /transition:\s*none\s*!important/, 'transition is zeroed');
+  });
+
+  it('still avoids background-attachment: fixed', () => {
+    assert.ok(!/background-attachment\s*:\s*fixed/.test(styleBlock));
+  });
+});

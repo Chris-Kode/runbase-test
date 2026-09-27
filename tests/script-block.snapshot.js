@@ -44,7 +44,7 @@
         }
       }
 
-      function createTodoElement(todo, onToggle, onDelete) {
+      function createTodoElement(todo, onToggle, onDelete, options = {}) {
         const li = document.createElement('li');
         li.dataset.id = todo.id;
         li.className = 'todo-item';
@@ -82,29 +82,102 @@
         li.appendChild(span);
         li.appendChild(deleteBtn);
 
+        if (options.entering) {
+          const delay = Number.isFinite(options.delay) ? options.delay : 0;
+          li.classList.add('is-entering');
+          li.style.setProperty('--row-delay', `${delay}ms`);
+          li.addEventListener(
+            'animationend',
+            () => {
+              li.classList.remove('is-entering');
+              li.style.removeProperty('--row-delay');
+            },
+            { once: true },
+          );
+        }
+
         return li;
       }
 
-      function renderTodos(onToggle, onDelete) {
+      const STAGGER_MS = 40;
+      const STAGGER_CAP = 8;
+
+      function renderTodos(onToggle, onDelete, entering) {
         const list = document.getElementById('todo-list');
         if (!list) return;
         list.innerHTML = '';
-        todos.forEach((todo) => {
-          const li = createTodoElement(todo, onToggle, onDelete);
+        todos.forEach((todo, index) => {
+          const shouldEnter = entering instanceof Set && entering.has(todo.id);
+          const delay = Math.min(index, STAGGER_CAP) * STAGGER_MS;
+          const li = createTodoElement(todo, onToggle, onDelete, {
+            entering: shouldEnter,
+            delay,
+          });
           list.appendChild(li);
         });
       }
 
+      function prefersReducedMotion() {
+        return (
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        );
+      }
+
       function handleToggle(id) {
-        toggleTodo(id);
+        const todo = toggleTodo(id);
         saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        if (!todo) return;
+
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        if (!li) {
+          renderTodos(handleToggle, handleDelete);
+          return;
+        }
+
+        li.classList.toggle('completed', todo.completed);
+        const checkbox = li.querySelector('.todo-checkbox');
+        if (checkbox) checkbox.checked = todo.completed;
+
+        // Replay the glow on repeated toggles with one forced reflow.
+        li.classList.remove('just-toggled');
+        void li.offsetWidth;
+        li.classList.add('just-toggled');
+        li.addEventListener(
+          'animationend',
+          () => {
+            li.classList.remove('just-toggled');
+          },
+          { once: true },
+        );
       }
 
       function handleDelete(id) {
-        deleteTodo(id);
-        saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        const finalize = () => {
+          deleteTodo(id);
+          saveTodos(todos);
+          renderTodos(handleToggle, handleDelete);
+        };
+
+        if (li && li.dataset.leaving === '1') return;
+        if (!li || prefersReducedMotion()) {
+          finalize();
+          return;
+        }
+
+        li.dataset.leaving = '1';
+        let done = false;
+        const settle = () => {
+          if (done) return;
+          done = true;
+          finalize();
+        };
+
+        li.classList.add('is-leaving');
+        li.addEventListener('animationend', settle, { once: true });
+        window.setTimeout(settle, 400);
       }
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -120,10 +193,10 @@
           if (todo) {
             todoInput.value = "";
             saveTodos(todos);
-            renderTodos(handleToggle, handleDelete);
+            renderTodos(handleToggle, handleDelete, new Set([todo.id]));
           }
         });
 
-        renderTodos(handleToggle, handleDelete);
+        renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
       });
     
