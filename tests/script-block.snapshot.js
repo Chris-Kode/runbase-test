@@ -44,7 +44,7 @@
         }
       }
 
-      function createTodoElement(todo, onToggle, onDelete) {
+      function createTodoElement(todo, onToggle, onDelete, options = {}) {
         const li = document.createElement('li');
         li.dataset.id = todo.id;
         li.className = 'todo-item';
@@ -82,29 +82,108 @@
         li.appendChild(span);
         li.appendChild(deleteBtn);
 
+        if (options.entering) {
+          const delay = Number.isFinite(options.delay) ? options.delay : 0;
+          li.classList.add('is-entering');
+          li.style.setProperty('--row-delay', `${delay}ms`);
+          // Child animations (e.g. check-pop) bubble, so ignore anything that
+          // is not this row's own entrance animation.
+          const onRowEnterEnd = (event) => {
+            if (event.target !== li || event.animationName !== 'row-enter') return;
+            li.removeEventListener('animationend', onRowEnterEnd);
+            li.classList.remove('is-entering');
+            li.style.removeProperty('--row-delay');
+          };
+          li.addEventListener('animationend', onRowEnterEnd);
+        }
+
         return li;
       }
 
-      function renderTodos(onToggle, onDelete) {
+      const STAGGER_MS = 40;
+      const STAGGER_CAP = 8;
+
+      function renderTodos(onToggle, onDelete, entering) {
         const list = document.getElementById('todo-list');
         if (!list) return;
         list.innerHTML = '';
-        todos.forEach((todo) => {
-          const li = createTodoElement(todo, onToggle, onDelete);
+        todos.forEach((todo, index) => {
+          const shouldEnter = entering instanceof Set && entering.has(todo.id);
+          const delay = Math.min(index, STAGGER_CAP) * STAGGER_MS;
+          const li = createTodoElement(todo, onToggle, onDelete, {
+            entering: shouldEnter,
+            delay,
+          });
           list.appendChild(li);
         });
       }
 
+      function prefersReducedMotion() {
+        return (
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        );
+      }
+
       function handleToggle(id) {
-        toggleTodo(id);
+        const todo = toggleTodo(id);
         saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        if (!todo) return;
+
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        if (!li) {
+          renderTodos(handleToggle, handleDelete);
+          return;
+        }
+
+        li.classList.toggle('completed', todo.completed);
+        const checkbox = li.querySelector('.todo-checkbox');
+        if (checkbox) checkbox.checked = todo.completed;
+
+        // Replay the glow on repeated toggles with one forced reflow.
+        li.classList.remove('just-toggled');
+        void li.offsetWidth;
+        li.classList.add('just-toggled');
+        const onGlowEnd = (event) => {
+          if (event.target !== li || event.animationName !== 'row-glow') return;
+          li.removeEventListener('animationend', onGlowEnd);
+          li.classList.remove('just-toggled');
+        };
+        li.addEventListener('animationend', onGlowEnd);
       }
 
       function handleDelete(id) {
-        deleteTodo(id);
-        saveTodos(todos);
-        renderTodos(handleToggle, handleDelete);
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        const finalize = () => {
+          deleteTodo(id);
+          saveTodos(todos);
+          renderTodos(handleToggle, handleDelete);
+        };
+
+        if (li && li.dataset.leaving === '1') return;
+        if (!li || prefersReducedMotion()) {
+          finalize();
+          return;
+        }
+
+        li.dataset.leaving = '1';
+        let done = false;
+        const settle = (event) => {
+          // Only the row's own row-leave completion may finalize; child
+          // animations bubble and must not settle the row early.
+          if (event && (event.target !== li || event.animationName !== 'row-leave')) {
+            return;
+          }
+          if (done) return;
+          done = true;
+          li.removeEventListener('animationend', settle);
+          finalize();
+        };
+
+        li.classList.add('is-leaving');
+        li.addEventListener('animationend', settle);
+        window.setTimeout(settle, 400);
       }
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -120,10 +199,10 @@
           if (todo) {
             todoInput.value = "";
             saveTodos(todos);
-            renderTodos(handleToggle, handleDelete);
+            renderTodos(handleToggle, handleDelete, new Set([todo.id]));
           }
         });
 
-        renderTodos(handleToggle, handleDelete);
+        renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
       });
     
