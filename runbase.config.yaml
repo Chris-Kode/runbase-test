@@ -34,7 +34,7 @@ automations:
       labels:
         issue: [rb-ready-to-code]
 
-  # Step 2 — implement the plan and open the pull request.
+  # Step 2 — implement the plan and open the pull request..
   - name: implement
     on:
       issue:
