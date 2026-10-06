@@ -431,3 +431,138 @@ describe('issue #33 — professional motion system', () => {
     );
   });
 });
+
+describe('issue #35 — notes page with tags', () => {
+  it('renders a tabbed Todos/Notes view with a11y roles', () => {
+    for (const hook of [
+      'id="todos-view"',
+      'id="notes-view"',
+      'id="note-form"',
+      'id="note-input"',
+      'id="tag-input"',
+      'id="add-note-btn"',
+      'id="notes-list"',
+      'role="tablist"',
+      'role="tab"',
+      'role="tabpanel"',
+      'aria-selected',
+      'aria-controls',
+    ]) {
+      assert.ok(html.includes(hook), `missing markup hook: ${hook}`);
+    }
+    assert.match(html, /id="notes-view"[^>]*hidden/, '#notes-view starts hidden');
+  });
+
+  it('keeps the existing todo hooks intact', () => {
+    for (const hook of [
+      'id="todo-form"',
+      'id="todo-input"',
+      'id="add-btn"',
+      'id="todo-list"',
+      'class="app-card"',
+    ]) {
+      assert.ok(html.includes(hook), `missing todo hook: ${hook}`);
+    }
+  });
+
+  it('persists notes under a distinct localStorage key', () => {
+    assert.match(scriptBlock, /NOTES_KEY\s*=\s*['"]notes['"]/, 'notes key');
+    assert.ok(scriptBlock.includes('loadNotes'), 'loadNotes exists');
+    assert.ok(scriptBlock.includes('saveNotes'), 'saveNotes exists');
+    assert.match(scriptBlock, /localStorage/, 'uses localStorage');
+    assert.match(scriptBlock, /try\s*\{/, 'load wraps storage in try');
+    assert.match(scriptBlock, /catch/, 'storage errors are caught');
+    assert.match(scriptBlock, /STORAGE_KEY\s*=\s*['"]todos['"]/, 'todos key unchanged');
+  });
+
+  it('parses, de-dupes, lowercases, and caps tags', () => {
+    assert.ok(scriptBlock.includes('parseTags'), 'parseTags exists');
+    assert.match(scriptBlock, /new Set\(/, 'tag dedupe via Set');
+    assert.match(scriptBlock, /\/\[,\\s\]\+\//, 'splits on commas/whitespace');
+    assert.match(scriptBlock, /\.toLowerCase\(\)/, 'tags lowercased');
+    assert.match(scriptBlock, /MAX_TAGS/, 'tag cap exists');
+  });
+
+  it('builds note rows with tested classes and textContent (XSS-safe)', () => {
+    for (const hook of [
+      "li.className = 'note-item'",
+      "p.className = 'note-text'",
+      "chip.className = 'tag-chip'",
+      "deleteBtn.className = 'delete-btn'",
+    ]) {
+      assert.ok(scriptBlock.includes(hook), `missing note hook: ${hook}`);
+    }
+    assert.match(scriptBlock, /p\.textContent\s*=/, 'note text via textContent');
+    assert.match(scriptBlock, /chip\.textContent\s*=/, 'tag text via textContent');
+    assert.ok(!/note-text[\s\S]{0,40}innerHTML/.test(scriptBlock), 'no innerHTML for notes');
+  });
+
+  it('renders and deletes notes with the shared motion hooks', () => {
+    assert.match(scriptBlock, /function\s+renderNotes\s*\([^)]*entering/, 'renderNotes accepts entering');
+    assert.ok(scriptBlock.includes('handleDeleteNote'), 'handleDeleteNote exists');
+    assert.ok(scriptBlock.includes('is-leaving'), 'leaving hook exists');
+    assert.match(scriptBlock, /\.note-item\[data-id=/, 'queries note rows by id');
+  });
+
+  it('styles the tabs, note rows, tags, and empty state', () => {
+    for (const rule of [
+      '.view-tabs',
+      '.view-tab',
+      '.note-item',
+      '.note-text',
+      '.note-tags',
+      '.tag-chip',
+      '#notes-list:empty',
+    ]) {
+      assert.ok(containsStyleRule(rule), `missing style rule: ${rule}`);
+    }
+    assert.ok(
+      /#notes-list:empty[^{]*::after/.test(styleBlock),
+      'notes empty-state ::after message',
+    );
+    const entering =
+      styleBlock.match(/\.note-item\.is-entering\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(entering, /row-enter/, '.note-item.is-entering uses row-enter');
+    const leaving =
+      styleBlock.match(/\.note-item\.is-leaving\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(leaving, /row-leave/, '.note-item.is-leaving uses row-leave');
+    assert.match(
+      leaving,
+      /pointer-events:\s*none/,
+      '.note-item.is-leaving disables pointer events',
+    );
+  });
+
+  it('fits the existing design tokens and accessibility guards', () => {
+    for (const token of [
+      '--color-field',
+      '--color-border',
+      '--neon-cyan',
+      '--radius-row',
+      '--radius-control',
+      '--color-accent-soft',
+    ]) {
+      assert.ok(styleBlock.includes(token), `missing token: ${token}`);
+    }
+    assert.ok(/:focus-visible/.test(styleBlock), ':focus-visible retained');
+    assert.ok(
+      containsStyleRule('@media (prefers-reduced-motion: reduce)'),
+      'reduced-motion guard retained',
+    );
+  });
+
+  it('keeps the extracted selectors standalone (grouping-trap guard)', () => {
+    for (const selector of [
+      '#todo-input {',
+      '.app-card {',
+      '.todo-item.is-entering {',
+      '.todo-item.is-leaving {',
+      '.todo-item.completed .todo-text {',
+    ]) {
+      assert.ok(
+        styleBlock.includes(selector),
+        `selector must stay standalone: ${selector}`,
+      );
+    }
+  });
+});

@@ -44,6 +44,78 @@
         }
       }
 
+      const notes = [];
+      const NOTES_KEY = 'notes';
+      const MAX_TAGS = 8;
+      const MAX_TAG_LENGTH = 24;
+      let idCounter = 0;
+
+      function nextId() {
+        // Combine the clock with a counter so rapid adds cannot collide.
+        return Date.now() * 1000 + (idCounter++ % 1000);
+      }
+
+      function parseTags(raw) {
+        const seen = new Set();
+        const tags = [];
+        for (const part of String(raw).split(/[,\s]+/)) {
+          const tag = part.trim().toLowerCase().slice(0, MAX_TAG_LENGTH);
+          if (!tag || seen.has(tag)) continue;
+          seen.add(tag);
+          tags.push(tag);
+          if (tags.length >= MAX_TAGS) break;
+        }
+        return tags;
+      }
+
+      function addNote(text, rawTags) {
+        const trimmed = String(text).trim();
+        if (!trimmed) return null;
+        const note = {
+          id: nextId(),
+          text: trimmed,
+          tags: parseTags(rawTags),
+          createdAt: Date.now(),
+        };
+        notes.push(note);
+        return note;
+      }
+
+      function deleteNote(id) {
+        const index = notes.findIndex((n) => n.id === id);
+        if (index === -1) return undefined;
+        return notes.splice(index, 1)[0];
+      }
+
+      function loadNotes() {
+        try {
+          const raw = localStorage.getItem(NOTES_KEY);
+          if (raw === null) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .filter((note) => note && typeof note.text === 'string')
+            .map((note) => ({
+              id: note.id,
+              text: note.text,
+              tags: Array.isArray(note.tags)
+                ? note.tags.filter((tag) => typeof tag === 'string' && tag.trim())
+                : [],
+              createdAt: note.createdAt,
+            }));
+        } catch {
+          return [];
+        }
+      }
+
+      function saveNotes(list) {
+        try {
+          localStorage.setItem(NOTES_KEY, JSON.stringify(list));
+        } catch {
+          // Silently ignore storage errors
+        }
+      }
+
       function createTodoElement(todo, onToggle, onDelete, options = {}) {
         const li = document.createElement('li');
         li.dataset.id = todo.id;
@@ -118,6 +190,70 @@
         });
       }
 
+      function createNoteElement(note, onDelete, options = {}) {
+        const li = document.createElement('li');
+        li.dataset.id = note.id;
+        li.className = 'note-item';
+
+        const p = document.createElement('p');
+        p.className = 'note-text';
+        p.textContent = note.text;
+
+        const tags = document.createElement('ul');
+        tags.className = 'note-tags';
+        (note.tags || []).forEach((tag) => {
+          const chip = document.createElement('li');
+          chip.className = 'tag-chip';
+          chip.textContent = '#' + tag;
+          tags.appendChild(chip);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '✕';
+        deleteBtn.setAttribute('aria-label', 'Delete note');
+
+        if (onDelete) {
+          deleteBtn.addEventListener('click', () => {
+            onDelete(note.id);
+          });
+        }
+
+        li.appendChild(p);
+        if (note.tags && note.tags.length) li.appendChild(tags);
+        li.appendChild(deleteBtn);
+
+        if (options.entering) {
+          const delay = Number.isFinite(options.delay) ? options.delay : 0;
+          li.classList.add('is-entering');
+          li.style.setProperty('--row-delay', `${delay}ms`);
+          const onRowEnterEnd = (event) => {
+            if (event.target !== li || event.animationName !== 'row-enter') return;
+            li.removeEventListener('animationend', onRowEnterEnd);
+            li.classList.remove('is-entering');
+            li.style.removeProperty('--row-delay');
+          };
+          li.addEventListener('animationend', onRowEnterEnd);
+        }
+
+        return li;
+      }
+
+      function renderNotes(onDelete, entering) {
+        const list = document.getElementById('notes-list');
+        if (!list) return;
+        list.innerHTML = '';
+        notes.forEach((note, index) => {
+          const shouldEnter = entering instanceof Set && entering.has(note.id);
+          const delay = Math.min(index, STAGGER_CAP) * STAGGER_MS;
+          const li = createNoteElement(note, onDelete, {
+            entering: shouldEnter,
+            delay,
+          });
+          list.appendChild(li);
+        });
+      }
+
       function prefersReducedMotion() {
         return (
           typeof window !== 'undefined' &&
@@ -153,14 +289,7 @@
         li.addEventListener('animationend', onGlowEnd);
       }
 
-      function handleDelete(id) {
-        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
-        const finalize = () => {
-          deleteTodo(id);
-          saveTodos(todos);
-          renderTodos(handleToggle, handleDelete);
-        };
-
+      function animateRowRemoval(li, finalize) {
         if (li && li.dataset.leaving === '1') return;
         if (!li || prefersReducedMotion()) {
           finalize();
@@ -186,12 +315,63 @@
         window.setTimeout(settle, 400);
       }
 
+      function handleDelete(id) {
+        const li = document.querySelector(`.todo-item[data-id="${id}"]`);
+        animateRowRemoval(li, () => {
+          deleteTodo(id);
+          saveTodos(todos);
+          renderTodos(handleToggle, handleDelete);
+        });
+      }
+
+      function handleDeleteNote(id) {
+        const li = document.querySelector(`.note-item[data-id="${id}"]`);
+        animateRowRemoval(li, () => {
+          deleteNote(id);
+          saveNotes(notes);
+          renderNotes(handleDeleteNote);
+        });
+      }
+
+      function setView(view) {
+        const isNotes = view === 'notes';
+        const todosView = document.getElementById('todos-view');
+        const notesView = document.getElementById('notes-view');
+        const tabTodos = document.getElementById('tab-todos');
+        const tabNotes = document.getElementById('tab-notes');
+
+        if (todosView) todosView.hidden = isNotes;
+        if (notesView) notesView.hidden = !isNotes;
+
+        if (tabTodos) {
+          tabTodos.setAttribute('aria-selected', String(!isNotes));
+          tabTodos.classList.toggle('is-active', !isNotes);
+        }
+        if (tabNotes) {
+          tabNotes.setAttribute('aria-selected', String(isNotes));
+          tabNotes.classList.toggle('is-active', isNotes);
+        }
+
+        const title = document.getElementById('app-title');
+        const subtitle = document.getElementById('app-subtitle');
+        if (title) title.textContent = isNotes ? 'Notes' : 'Todos';
+        if (subtitle) {
+          subtitle.textContent = isNotes ? 'Jot things down' : 'Stay on top of your day';
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         const loaded = loadTodos();
         if (loaded.length) todos.push(...loaded);
 
+        const loadedNotes = loadNotes();
+        if (loadedNotes.length) notes.push(...loadedNotes);
+
         const todoInput = document.getElementById("todo-input");
         const todoForm = document.getElementById("todo-form");
+        const noteForm = document.getElementById("note-form");
+        const noteInput = document.getElementById("note-input");
+        const tagInput = document.getElementById("tag-input");
 
         todoForm.addEventListener("submit", (event) => {
           event.preventDefault();
@@ -203,6 +383,43 @@
           }
         });
 
+        if (noteForm) {
+          noteForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const note = addNote(noteInput.value, tagInput.value);
+            if (note) {
+              noteInput.value = "";
+              tagInput.value = "";
+              saveNotes(notes);
+              renderNotes(handleDeleteNote, new Set([note.id]));
+            }
+          });
+        }
+
+        const tabTodos = document.getElementById("tab-todos");
+        const tabNotes = document.getElementById("tab-notes");
+        const tabs = [tabTodos, tabNotes].filter(Boolean);
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            setView(tab === tabNotes ? "notes" : "todos");
+          });
+          tab.addEventListener("keydown", (event) => {
+            const index = tabs.indexOf(tab);
+            let next = null;
+            if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+            else if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+            else if (event.key === "Home") next = 0;
+            else if (event.key === "End") next = tabs.length - 1;
+            if (next === null) return;
+            event.preventDefault();
+            tabs[next].focus();
+            setView(next === 1 ? "notes" : "todos");
+          });
+        });
+
+        setView(window.location.hash === "#notes" ? "notes" : "todos");
         renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
+        renderNotes(handleDeleteNote, new Set(notes.map((n) => n.id)));
       });
     
