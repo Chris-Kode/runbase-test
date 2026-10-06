@@ -494,7 +494,69 @@ describe('issue #35 — notes page with tags', () => {
     }
     assert.match(scriptBlock, /p\.textContent\s*=/, 'note text via textContent');
     assert.match(scriptBlock, /chip\.textContent\s*=/, 'tag text via textContent');
-    assert.ok(!/note-text[\s\S]{0,40}innerHTML/.test(scriptBlock), 'no innerHTML for notes');
+    // No note-derived value may end up in innerHTML: the only permitted
+    // innerHTML writes are the empty-string list clears.
+    const innerHtmlWrites = [
+      ...scriptBlock.matchAll(/\.innerHTML\s*=\s*([^;]+);/g),
+    ].map((match) => match[1].trim());
+    assert.ok(
+      innerHtmlWrites.every((value) => value === "''"),
+      `only empty innerHTML clears are allowed (found: ${innerHtmlWrites.join(', ')})`,
+    );
+  });
+
+  it('wires a complete, roving ARIA tab pattern', () => {
+    assert.match(
+      html,
+      /id="tab-todos"[^>]*tabindex="0"/,
+      'active tab is tabbable',
+    );
+    assert.match(
+      html,
+      /id="tab-notes"[^>]*tabindex="-1"/,
+      'inactive tab is removed from the tab order',
+    );
+    assert.match(
+      html,
+      /id="todos-view"[^>]*tabindex="0"/,
+      'todos panel is focusable',
+    );
+    assert.match(
+      html,
+      /id="notes-view"[^>]*tabindex="0"/,
+      'notes panel is focusable',
+    );
+    assert.match(
+      scriptBlock,
+      /tabTodos\.tabIndex\s*=\s*isNotes\s*\?\s*-1\s*:\s*0/,
+      'setView applies the roving tabindex',
+    );
+  });
+
+  it('keeps the URL hash and document title in sync with the view', () => {
+    assert.match(
+      scriptBlock,
+      /window\.location\.hash\s*=\s*hash/,
+      'setView writes the selected view to the hash',
+    );
+    assert.match(
+      scriptBlock,
+      /addEventListener\(\s*["']hashchange["']/,
+      'hashchange keeps back/forward in sync',
+    );
+    assert.match(
+      scriptBlock,
+      /document\.title\s*=/,
+      'document title follows the selected view',
+    );
+  });
+
+  it('sanitizes persisted note ids', () => {
+    assert.match(
+      scriptBlock,
+      /Number\.isFinite\(\s*note\.id\s*\)/,
+      'loadNotes guards against malformed ids',
+    );
   });
 
   it('renders and deletes notes with the shared motion hooks', () => {
@@ -516,6 +578,12 @@ describe('issue #35 — notes page with tags', () => {
     ]) {
       assert.ok(containsStyleRule(rule), `missing style rule: ${rule}`);
     }
+    const chip = styleBlock.match(/\.tag-chip\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(
+      chip,
+      /color:\s*var\(--color-accent\)/,
+      'tag chips use the theme-aware accent text token for contrast',
+    );
     assert.ok(
       /#notes-list:empty[^{]*::after/.test(styleBlock),
       'notes empty-state ::after message',
@@ -548,6 +616,15 @@ describe('issue #35 — notes page with tags', () => {
     assert.ok(
       containsStyleRule('@media (prefers-reduced-motion: reduce)'),
       'reduced-motion guard retained',
+    );
+    const reduced = extractBlock(
+      styleBlock,
+      '@media (prefers-reduced-motion: reduce)',
+    );
+    assert.match(
+      reduced,
+      /#add-note-btn:hover,[\s\S]*?#add-note-btn:active\s*\{\s*transform:\s*none/,
+      'reduced motion disables the note button transform too',
     );
   });
 

@@ -96,7 +96,10 @@
           return parsed
             .filter((note) => note && typeof note.text === 'string')
             .map((note) => ({
-              id: note.id,
+              id:
+                typeof note.id === 'number' && Number.isFinite(note.id)
+                  ? note.id
+                  : nextId(),
               text: note.text,
               tags: Array.isArray(note.tags)
                 ? note.tags.filter((tag) => typeof tag === 'string' && tag.trim())
@@ -333,7 +336,7 @@
         });
       }
 
-      function setView(view) {
+      function setView(view, syncHash = true) {
         const isNotes = view === 'notes';
         const todosView = document.getElementById('todos-view');
         const notesView = document.getElementById('notes-view');
@@ -346,10 +349,12 @@
         if (tabTodos) {
           tabTodos.setAttribute('aria-selected', String(!isNotes));
           tabTodos.classList.toggle('is-active', !isNotes);
+          tabTodos.tabIndex = isNotes ? -1 : 0;
         }
         if (tabNotes) {
           tabNotes.setAttribute('aria-selected', String(isNotes));
           tabNotes.classList.toggle('is-active', isNotes);
+          tabNotes.tabIndex = isNotes ? 0 : -1;
         }
 
         const title = document.getElementById('app-title');
@@ -357,6 +362,13 @@
         if (title) title.textContent = isNotes ? 'Notes' : 'Todos';
         if (subtitle) {
           subtitle.textContent = isNotes ? 'Jot things down' : 'Stay on top of your day';
+        }
+        document.title = isNotes ? 'Notes' : 'Todos';
+
+        // Keep the URL in sync so tabs stay bookmarkable/back-button friendly.
+        if (syncHash) {
+          const hash = isNotes ? '#notes' : '#todos';
+          if (window.location.hash !== hash) window.location.hash = hash;
         }
       }
 
@@ -418,7 +430,11 @@
           });
         });
 
-        setView(window.location.hash === "#notes" ? "notes" : "todos");
+        window.addEventListener("hashchange", () => {
+          setView(window.location.hash === "#notes" ? "notes" : "todos", false);
+        });
+
+        setView(window.location.hash === "#notes" ? "notes" : "todos", false);
         renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
         renderNotes(handleDeleteNote, new Set(notes.map((n) => n.id)));
       });

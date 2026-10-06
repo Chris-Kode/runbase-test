@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo List</title>
+    <title>Todos &amp; Notes</title>
     <style>
       /* 1. Design tokens — neon (dark-first) */
       :root {
@@ -512,33 +512,28 @@
         animation-delay: calc(var(--stagger) * 2);
       }
 
-      #note-input {
-        flex: 1 1 100%;
-        min-height: 4.5rem;
+      #note-input,
+      #tag-input {
         padding: 0.6rem var(--space-3);
         background: var(--color-field);
         color: var(--color-text);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-control);
         font: inherit;
-        resize: vertical;
         transition:
           border-color var(--speed) ease,
           box-shadow var(--speed) ease;
       }
 
+      #note-input {
+        flex: 1 1 100%;
+        min-height: 4.5rem;
+        resize: vertical;
+      }
+
       #tag-input {
         flex: 1 1 12rem;
         min-width: 0;
-        padding: 0.6rem var(--space-3);
-        background: var(--color-field);
-        color: var(--color-text);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-control);
-        font: inherit;
-        transition:
-          border-color var(--speed) ease,
-          box-shadow var(--speed) ease;
       }
 
       #note-input::placeholder,
@@ -647,7 +642,7 @@
       .tag-chip {
         padding: 0.15rem 0.6rem;
         background: var(--color-accent-soft);
-        color: var(--neon-cyan);
+        color: var(--color-accent);
         border: 1px solid var(--neon-cyan);
         border-radius: 999px;
         font-size: 0.75rem;
@@ -823,7 +818,9 @@
         }
 
         #add-btn:hover,
-        #add-btn:active {
+        #add-btn:active,
+        #add-note-btn:hover,
+        #add-note-btn:active {
           transform: none;
         }
 
@@ -860,12 +857,12 @@
 
       <nav class="view-tabs" role="tablist" aria-label="Views">
         <button class="view-tab is-active" id="tab-todos" role="tab"
-                aria-selected="true" aria-controls="todos-view" type="button">Todos</button>
+                aria-selected="true" aria-controls="todos-view" tabindex="0" type="button">Todos</button>
         <button class="view-tab" id="tab-notes" role="tab"
-                aria-selected="false" aria-controls="notes-view" type="button">Notes</button>
+                aria-selected="false" aria-controls="notes-view" tabindex="-1" type="button">Notes</button>
       </nav>
 
-      <section id="todos-view" role="tabpanel" aria-labelledby="tab-todos">
+      <section id="todos-view" role="tabpanel" aria-labelledby="tab-todos" tabindex="0">
         <form id="todo-form">
           <input id="todo-input" type="text" placeholder="What needs to be done?">
           <button id="add-btn" type="submit">Add</button>
@@ -873,7 +870,7 @@
         <ul id="todo-list"></ul>
       </section>
 
-      <section id="notes-view" role="tabpanel" aria-labelledby="tab-notes" hidden>
+      <section id="notes-view" role="tabpanel" aria-labelledby="tab-notes" tabindex="0" hidden>
         <form id="note-form">
           <textarea id="note-input" rows="3" placeholder="Write a note…"></textarea>
           <input id="tag-input" type="text" placeholder="tags, separated by commas or spaces">
@@ -981,7 +978,10 @@
           return parsed
             .filter((note) => note && typeof note.text === 'string')
             .map((note) => ({
-              id: note.id,
+              id:
+                typeof note.id === 'number' && Number.isFinite(note.id)
+                  ? note.id
+                  : nextId(),
               text: note.text,
               tags: Array.isArray(note.tags)
                 ? note.tags.filter((tag) => typeof tag === 'string' && tag.trim())
@@ -1218,7 +1218,7 @@
         });
       }
 
-      function setView(view) {
+      function setView(view, syncHash = true) {
         const isNotes = view === 'notes';
         const todosView = document.getElementById('todos-view');
         const notesView = document.getElementById('notes-view');
@@ -1231,10 +1231,12 @@
         if (tabTodos) {
           tabTodos.setAttribute('aria-selected', String(!isNotes));
           tabTodos.classList.toggle('is-active', !isNotes);
+          tabTodos.tabIndex = isNotes ? -1 : 0;
         }
         if (tabNotes) {
           tabNotes.setAttribute('aria-selected', String(isNotes));
           tabNotes.classList.toggle('is-active', isNotes);
+          tabNotes.tabIndex = isNotes ? 0 : -1;
         }
 
         const title = document.getElementById('app-title');
@@ -1242,6 +1244,13 @@
         if (title) title.textContent = isNotes ? 'Notes' : 'Todos';
         if (subtitle) {
           subtitle.textContent = isNotes ? 'Jot things down' : 'Stay on top of your day';
+        }
+        document.title = isNotes ? 'Notes' : 'Todos';
+
+        // Keep the URL in sync so tabs stay bookmarkable/back-button friendly.
+        if (syncHash) {
+          const hash = isNotes ? '#notes' : '#todos';
+          if (window.location.hash !== hash) window.location.hash = hash;
         }
       }
 
@@ -1303,7 +1312,11 @@
           });
         });
 
-        setView(window.location.hash === "#notes" ? "notes" : "todos");
+        window.addEventListener("hashchange", () => {
+          setView(window.location.hash === "#notes" ? "notes" : "todos", false);
+        });
+
+        setView(window.location.hash === "#notes" ? "notes" : "todos", false);
         renderTodos(handleToggle, handleDelete, new Set(todos.map((t) => t.id)));
         renderNotes(handleDeleteNote, new Set(notes.map((n) => n.id)));
       });
