@@ -431,3 +431,215 @@ describe('issue #33 — professional motion system', () => {
     );
   });
 });
+
+describe('issue #35 — notes page with tags', () => {
+  it('renders a tabbed Todos/Notes view with a11y roles', () => {
+    for (const hook of [
+      'id="todos-view"',
+      'id="notes-view"',
+      'id="note-form"',
+      'id="note-input"',
+      'id="tag-input"',
+      'id="add-note-btn"',
+      'id="notes-list"',
+      'role="tablist"',
+      'role="tab"',
+      'role="tabpanel"',
+      'aria-selected',
+      'aria-controls',
+    ]) {
+      assert.ok(html.includes(hook), `missing markup hook: ${hook}`);
+    }
+    assert.match(html, /id="notes-view"[^>]*hidden/, '#notes-view starts hidden');
+  });
+
+  it('keeps the existing todo hooks intact', () => {
+    for (const hook of [
+      'id="todo-form"',
+      'id="todo-input"',
+      'id="add-btn"',
+      'id="todo-list"',
+      'class="app-card"',
+    ]) {
+      assert.ok(html.includes(hook), `missing todo hook: ${hook}`);
+    }
+  });
+
+  it('persists notes under a distinct localStorage key', () => {
+    assert.match(scriptBlock, /NOTES_KEY\s*=\s*['"]notes['"]/, 'notes key');
+    assert.ok(scriptBlock.includes('loadNotes'), 'loadNotes exists');
+    assert.ok(scriptBlock.includes('saveNotes'), 'saveNotes exists');
+    assert.match(scriptBlock, /localStorage/, 'uses localStorage');
+    assert.match(scriptBlock, /try\s*\{/, 'load wraps storage in try');
+    assert.match(scriptBlock, /catch/, 'storage errors are caught');
+    assert.match(scriptBlock, /STORAGE_KEY\s*=\s*['"]todos['"]/, 'todos key unchanged');
+  });
+
+  it('parses, de-dupes, lowercases, and caps tags', () => {
+    assert.ok(scriptBlock.includes('parseTags'), 'parseTags exists');
+    assert.match(scriptBlock, /new Set\(/, 'tag dedupe via Set');
+    assert.match(scriptBlock, /\/\[,\\s\]\+\//, 'splits on commas/whitespace');
+    assert.match(scriptBlock, /\.toLowerCase\(\)/, 'tags lowercased');
+    assert.match(scriptBlock, /MAX_TAGS/, 'tag cap exists');
+  });
+
+  it('builds note rows with tested classes and textContent (XSS-safe)', () => {
+    for (const hook of [
+      "li.className = 'note-item'",
+      "p.className = 'note-text'",
+      "chip.className = 'tag-chip'",
+      "deleteBtn.className = 'delete-btn'",
+    ]) {
+      assert.ok(scriptBlock.includes(hook), `missing note hook: ${hook}`);
+    }
+    assert.match(scriptBlock, /p\.textContent\s*=/, 'note text via textContent');
+    assert.match(scriptBlock, /chip\.textContent\s*=/, 'tag text via textContent');
+    // No note-derived value may end up in innerHTML: the only permitted
+    // innerHTML writes are the empty-string list clears.
+    const innerHtmlWrites = [
+      ...scriptBlock.matchAll(/\.innerHTML\s*=\s*([^;]+);/g),
+    ].map((match) => match[1].trim());
+    assert.ok(
+      innerHtmlWrites.every((value) => value === "''"),
+      `only empty innerHTML clears are allowed (found: ${innerHtmlWrites.join(', ')})`,
+    );
+  });
+
+  it('wires a complete, roving ARIA tab pattern', () => {
+    assert.match(
+      html,
+      /id="tab-todos"[^>]*tabindex="0"/,
+      'active tab is tabbable',
+    );
+    assert.match(
+      html,
+      /id="tab-notes"[^>]*tabindex="-1"/,
+      'inactive tab is removed from the tab order',
+    );
+    assert.match(
+      html,
+      /id="todos-view"[^>]*tabindex="0"/,
+      'todos panel is focusable',
+    );
+    assert.match(
+      html,
+      /id="notes-view"[^>]*tabindex="0"/,
+      'notes panel is focusable',
+    );
+    assert.match(
+      scriptBlock,
+      /tabTodos\.tabIndex\s*=\s*isNotes\s*\?\s*-1\s*:\s*0/,
+      'setView applies the roving tabindex',
+    );
+  });
+
+  it('keeps the URL hash and document title in sync with the view', () => {
+    assert.match(
+      scriptBlock,
+      /window\.location\.hash\s*=\s*hash/,
+      'setView writes the selected view to the hash',
+    );
+    assert.match(
+      scriptBlock,
+      /addEventListener\(\s*["']hashchange["']/,
+      'hashchange keeps back/forward in sync',
+    );
+    assert.match(
+      scriptBlock,
+      /document\.title\s*=/,
+      'document title follows the selected view',
+    );
+  });
+
+  it('sanitizes persisted note ids', () => {
+    assert.match(
+      scriptBlock,
+      /Number\.isFinite\(\s*note\.id\s*\)/,
+      'loadNotes guards against malformed ids',
+    );
+  });
+
+  it('renders and deletes notes with the shared motion hooks', () => {
+    assert.match(scriptBlock, /function\s+renderNotes\s*\([^)]*entering/, 'renderNotes accepts entering');
+    assert.ok(scriptBlock.includes('handleDeleteNote'), 'handleDeleteNote exists');
+    assert.ok(scriptBlock.includes('is-leaving'), 'leaving hook exists');
+    assert.match(scriptBlock, /\.note-item\[data-id=/, 'queries note rows by id');
+  });
+
+  it('styles the tabs, note rows, tags, and empty state', () => {
+    for (const rule of [
+      '.view-tabs',
+      '.view-tab',
+      '.note-item',
+      '.note-text',
+      '.note-tags',
+      '.tag-chip',
+      '#notes-list:empty',
+    ]) {
+      assert.ok(containsStyleRule(rule), `missing style rule: ${rule}`);
+    }
+    const chip = styleBlock.match(/\.tag-chip\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(
+      chip,
+      /color:\s*var\(--color-accent\)/,
+      'tag chips use the theme-aware accent text token for contrast',
+    );
+    assert.ok(
+      /#notes-list:empty[^{]*::after/.test(styleBlock),
+      'notes empty-state ::after message',
+    );
+    const entering =
+      styleBlock.match(/\.note-item\.is-entering\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(entering, /row-enter/, '.note-item.is-entering uses row-enter');
+    const leaving =
+      styleBlock.match(/\.note-item\.is-leaving\s*\{([^}]*)\}/)?.[1] ?? '';
+    assert.match(leaving, /row-leave/, '.note-item.is-leaving uses row-leave');
+    assert.match(
+      leaving,
+      /pointer-events:\s*none/,
+      '.note-item.is-leaving disables pointer events',
+    );
+  });
+
+  it('fits the existing design tokens and accessibility guards', () => {
+    for (const token of [
+      '--color-field',
+      '--color-border',
+      '--neon-cyan',
+      '--radius-row',
+      '--radius-control',
+      '--color-accent-soft',
+    ]) {
+      assert.ok(styleBlock.includes(token), `missing token: ${token}`);
+    }
+    assert.ok(/:focus-visible/.test(styleBlock), ':focus-visible retained');
+    assert.ok(
+      containsStyleRule('@media (prefers-reduced-motion: reduce)'),
+      'reduced-motion guard retained',
+    );
+    const reduced = extractBlock(
+      styleBlock,
+      '@media (prefers-reduced-motion: reduce)',
+    );
+    assert.match(
+      reduced,
+      /#add-note-btn:hover,[\s\S]*?#add-note-btn:active\s*\{\s*transform:\s*none/,
+      'reduced motion disables the note button transform too',
+    );
+  });
+
+  it('keeps the extracted selectors standalone (grouping-trap guard)', () => {
+    for (const selector of [
+      '#todo-input {',
+      '.app-card {',
+      '.todo-item.is-entering {',
+      '.todo-item.is-leaving {',
+      '.todo-item.completed .todo-text {',
+    ]) {
+      assert.ok(
+        styleBlock.includes(selector),
+        `selector must stay standalone: ${selector}`,
+      );
+    }
+  });
+});
